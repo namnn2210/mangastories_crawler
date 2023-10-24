@@ -1,21 +1,9 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 
-class Crawler(metaclass=ABCMeta):
+class Crawler(ABC):
     @abstractmethod
-    def __init__(self):
-        pass
-
-    @abstractmethod
-    def get_all(self):
-        pass
-
-    @abstractmethod
-    def update_manga(self):
-        pass
-
-    @abstractmethod
-    def update_chapter(self):
+    def crawl(self):
         pass
 
     def default_user_agent(self):
