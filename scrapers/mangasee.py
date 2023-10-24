@@ -20,12 +20,18 @@ class MangaseeCrawler(Crawler):
 
             # Wait for all tasks to complete and get the results
             results = [future.result() for future in concurrent.futures.as_completed(futures) if future.result() is not None]
+            
+    def update_chapter(self):
+        manga_url = 'https://mangasee123.com/'
+        
+        return super().update_chapter()
         
         
     def extract_manga_info(self,manga):
         try:
             manga_slug = manga['i']
             manga_url = f'https://mangasee123.com/manga/{manga_slug}'
+            logging.info(manga_url)
             header = {
                 'User-Agent':'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1667.0 Safari/537.36'
             }
