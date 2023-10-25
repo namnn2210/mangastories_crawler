@@ -3,6 +3,7 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from configs.config import MAX_THREADS
 from utils.crawler_util import get_soup, save_to_json
+from sources.manga_sources import MangaSourceEnum
 import requests
 import concurrent.futures
 import re
@@ -153,7 +154,7 @@ class MangaseeCrawler(Crawler):
                         'chapter_source': chapter_source
                     }
                     list_chapters_info.append(chapter_info_dict)
-                final_dict = {'url': manga_slug,'count_chapters': manga_count_chapters, 'chapters': list_chapters_info}
+                final_dict = {'url': manga_slug,'count_chapters': manga_count_chapters, 'chapters': list_chapters_info, 'source_site':MangaSourceEnum.MANGASEE.value}
                 
                 # Insert or Update 
                 filter_criteria = {"url": final_dict["url"]}

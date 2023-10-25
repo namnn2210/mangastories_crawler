@@ -6,6 +6,7 @@ from models.entities import MangaSource, Manga, MangaSourceRelations
 
 class MangaSourceEnum(Enum):
     MANGASEE = 'mangasee'
+    MANHUAUS = 'manhuaus'
     
 
 class MangaSourceWriter:
