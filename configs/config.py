@@ -1,7 +1,8 @@
 # MYSQL CONFIG
 DBUSERNAME = 'bgudb'
 DBPASSWORD = 'Bg2023!m1'
-DBHOST = '10.1.0.3'
+# DBHOST = '10.1.0.3'
+DBHOST = '5.78.77.71'
 DBPORT = 3306
 DBNAME = 'mangamonster_com'
 

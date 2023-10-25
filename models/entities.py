@@ -29,7 +29,7 @@ class Manga(Base):
     meta_tag_id = Column(BIGINT)
     created_by = Column(BIGINT, default=1)
     updated_by = Column(BIGINT, default=1)
-    deleted_by = Column(BIGINT, default=1)
+    deleted_by = Column(BIGINT)
     created_at = Column(DateTime, default=datetime.now())
     updated_at = Column(DateTime, default=datetime.now())
     deleted_at = Column(DateTime)
@@ -64,10 +64,39 @@ class MangaChapters(Base):
     resource_status = Column(String(255))
     created_by = Column(BIGINT, default=1)
     updated_by = Column(BIGINT, default=1)
-    deleted_by = Column(BIGINT, default=1)
+    deleted_by = Column(BIGINT)
     created_at = Column(DateTime, default=datetime.now())
     updated_at = Column(DateTime, default=datetime.now())
     deleted_at = Column(DateTime)
     total_view = Column(Integer)
     new_slug = Column(String(255))
     chapter_source = Column(String(255))
+
+
+class MangaSource(Base):
+    __tablename__ = "tx_manga_sources"
+    
+    id = Column(Integer, primary_key=True, autoincrement="auto")
+    idx = Column(String(36))
+    name = Column(String(255))
+    slug = Column(String(255))
+    status = Column(SMALLINT, default=1)
+    created_by = Column(BIGINT, default=1)
+    updated_by = Column(BIGINT, default=1)
+    deleted_by = Column(BIGINT)
+    created_at = Column(DateTime, default=datetime.now())
+    updated_at = Column(DateTime, default=datetime.now())
+    deleted_at = Column(DateTime)
+    
+class MangaSourceRelations(Base):
+    __tablename__ = "tx_manga_source_relations"
+    
+    id = Column(Integer, primary_key=True, autoincrement="auto")
+    manga_id = Column(BIGINT)
+    source_id = Column(BIGINT)
+    ordinal = Column(Float, default=0)
+    status = Column(SMALLINT, default=1)
+    created_by = Column(BIGINT, default=1)
+    deleted_by = Column(BIGINT)
+    created_at = Column(DateTime, default=datetime.now())
+    deleted_at = Column(DateTime)
