@@ -7,6 +7,7 @@ def create_and_run_crawler(factory):
 
 if __name__ == "__main__":
     website1_factory = MangaseeCrawlerFactory()
-    create_and_run_crawler(website1_factory)
+    # create_and_run_crawler(website1_factory)
+    website1_factory.create_crawler().update_chapter()
     # manga_source_writer = MangaSourceWriter()
     # manga_source_writer.add_manga_source_relations()

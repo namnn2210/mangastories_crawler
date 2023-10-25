@@ -2,8 +2,9 @@ from connections.connection import Connection
 from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from configs.config import MAX_THREADS
-from utils.crawler_util import get_soup, save_to_json
+from utils.crawler_util import get_soup, format_chapter_number
 from sources.manga_sources import MangaSourceEnum
+from models.entities import Manga, MangaChapters
 import requests
 import concurrent.futures
 import re
@@ -37,6 +38,7 @@ class MangaseeCrawler(Crawler):
         
             
     def update_chapter(self):
+        db = Connection().mysql_connect()
         manga_url = 'https://mangasee123.com/'
         soup = get_soup(manga_url, header=header)
         script = soup.findAll('script')[-1].text
@@ -48,7 +50,24 @@ class MangaseeCrawler(Crawler):
             list_latest_json = json.loads(latest_json_str)
         for item in list_latest_json:
             chapter_encoded = self.chapter_encode(item['Chapter'])
-            chapter_url = 'https://mangasee123.com/read-online/{}{}-page-1.html'.format(item['IndexName'], chapter_encoded)
+            # Get manga from DB
+            db_manga = db.query(Manga).where(Manga.slug == item['IndexName'].lower()).first()
+            if db_manga is not None:
+                # Check if manga has chapter
+                index_string = item['Chapter'][0:1]
+                if index_string == '1':
+                    season = 0
+                else:
+                    season = int(index_string)
+                logging.info(db_manga.id)
+                logging.info(format_chapter_number(item['Chapter']))
+                logging.info(season)
+                db_manga_chapter = db.query(MangaChapters).where(MangaChapters.manga_id == db_manga.id).where(MangaChapters.ordinal == float(format_chapter_number(item['Chapter']))).where(MangaChapters.season == season).first()
+                if db_manga_chapter is None:
+                    chapter_url = 'https://mangasee123.com/read-online/{}{}-page-1.html'.format(item['IndexName'], chapter_encoded)
+                    logging.info(chapter_url)
+                else:
+                    logging.info('New chapter %s for manga %s existed' % (item['Chapter'], item['IndexName']))
             # selected_df = df_mangas.loc[df_mangas['slug'] == item['IndexName'].lower()]
             # if not selected_df.empty:
             #     # logger.info(df_manga_chapter_update)
