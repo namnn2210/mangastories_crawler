@@ -1,4 +1,6 @@
+from connections.connection import Connection
 from .base.crawler import Crawler
+from .base.crawler_factory import CrawlerFactory
 from configs.config import MAX_THREADS
 from utils.crawler_util import get_soup, save_to_json
 import requests
@@ -12,6 +14,11 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 header = {
     'User-Agent':'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1667.0 Safari/537.36'
 }
+
+class MangaseeCrawlerFactory(CrawlerFactory):
+    def create_crawler(self):
+        logging.info('Mangasee crawler created')
+        return MangaseeCrawler()
 
 class MangaseeCrawler(Crawler):
 
@@ -107,6 +114,11 @@ class MangaseeCrawler(Crawler):
         
     def extract_manga_info(self,manga):
         try:
+            # Connect MongoDB
+            mongo_client = Connection().mongo_connect()
+            mongo_db = mongo_client['mangamonster']
+            mongo_collection = mongo_db['tx_mangas']
+                
             manga_slug = manga['i']
             manga_url = f'https://mangasee123.com/manga/{manga_slug}'
             logging.info(manga_url)
@@ -142,8 +154,13 @@ class MangaseeCrawler(Crawler):
                     }
                     list_chapters_info.append(chapter_info_dict)
                 final_dict = {'url': manga_slug,'count_chapters': manga_count_chapters, 'chapters': list_chapters_info}
-                logging.info(final_dict)
-                save_to_json(manga_slug, final_dict)
+                
+                # Insert or Update 
+                filter_criteria = {"url": final_dict["url"]}
+                mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
+                # mongo_collection.insert_one(final_dict)
+                logging.info('%s INSERTED TO DB' % manga_url)
+            mongo_client.close()
         except Exception as ex:
             logging.error(str(ex))
         
