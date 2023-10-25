@@ -1,17 +1,22 @@
 from .base.crawler import Crawler
 from configs.config import MAX_THREADS
-from utils.crawler_util import get_soup
+from utils.crawler_util import get_soup, save_to_json
 import requests
 import concurrent.futures
 import re
 import json
 import logging
 
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+header = {
+    'User-Agent':'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1667.0 Safari/537.36'
+}
 
 class MangaseeCrawler(Crawler):
 
     def crawl(self):
-        print('Mangasee crawling...')
+        logging.info('Mangasee crawling...')
         list_manga_url = 'https://mangasee123.com/_search.php'
         list_manga_request = requests.post(list_manga_url).json()
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
@@ -19,12 +24,85 @@ class MangaseeCrawler(Crawler):
             futures = [executor.submit(self.extract_manga_info, manga) for manga in list_manga_request]
 
             # Wait for all tasks to complete and get the results
-            results = [future.result() for future in concurrent.futures.as_completed(futures) if future.result() is not None]
+        for future in futures:
+            future.result()
+        
             
     def update_chapter(self):
         manga_url = 'https://mangasee123.com/'
+        soup = get_soup(manga_url, header=header)
+        script = soup.findAll('script')[-1].text
+        regex = r'vm.HotUpdateJSON\s=\s.{0,};'
+        match = re.search(regex, script)
+        list_latest_json = []
+        if match:
+            latest_json_str = match.group().replace('vm.HotUpdateJSON = ', '').replace(';', '')
+            list_latest_json = json.loads(latest_json_str)
+        for item in list_latest_json:
+            chapter_encoded = self.chapter_encode(item['Chapter'])
+            chapter_url = 'https://mangasee123.com/read-online/{}{}-page-1.html'.format(item['IndexName'], chapter_encoded)
+            # selected_df = df_mangas.loc[df_mangas['slug'] == item['IndexName'].lower()]
+            # if not selected_df.empty:
+            #     # logger.info(df_manga_chapter_update)
+            #     selected_id = selected_df['id'].values[0]
+            #     df_chapter_update = df_manga_chapter_update[df_manga_chapter_update['manga_id'] == selected_id]
+            #     if not df_chapter_update.empty:
+            #         current_update_datetime = pd.to_datetime(df_chapter_update['chapter_update_datetime'].values[0])
+                    
+            #         # current_update_datetime = datetime.strptime(df_chapter_update['chapter_update_datetime'].values[0], "%Y-%m-%d %H:%M:%S")
+            #         # web_update_datetime = current_update_datetime.replace(pd.to_datetime(item['Date']))
+            #         original_datetime = datetime.strptime(item['Date'], "%Y-%m-%dT%H:%M:%S%z")
+            #         desired_output_format = "%Y-%m-%d %H:%M:%S"
+            #         web_update_datetime = pd.to_datetime(original_datetime.strftime(desired_output_format))
+            #         # web_update_datetime = datetime.strptime(item['Date'], "%Y-%m-%d %H:%M:%S")
+            #         if web_update_datetime > current_update_datetime:
+            #             logger.info('UPDATE FOR MANGA ID %s ' % selected_id)
+            #             df_manga_chapter_update.loc[df_manga_chapter_update['manga_id'] == selected_id, 'chapter_update_datetime'] = item['Date']
+            #             df_manga_chapter_update.loc[df_manga_chapter_update['manga_id'] == selected_id, 'chapter_number'] = item['Chapter']
+            #             list_current_folder_str = df_manga_chapter_update.loc[df_manga_chapter_update['manga_id'] == selected_id]['list_current_folder'].values[0]
+            #             if isinstance(list_current_folder_str, float):
+            #                 list_current_folder = []
+            #             else:
+            #                 list_current_folder = list_current_folder_str.split(',')
+            #             list_current_folder.append(item['Chapter'])
+            #             remove_duplicate_current_folder = list(set(list_current_folder))
+            #             new_list_current_folder = ','.join(remove_duplicate_current_folder)
+            #             df_manga_chapter_update.loc[df_manga_chapter_update['manga_id'] == selected_id, 'list_current_folder'] = new_list_current_folder
+            #             chapter_source, chapter_info, index_name = get_chapter_info(chapter_url)
+            #             if chapter_info['Directory'] and chapter_info['Directory'] != '':
+            #                 directory = chapter_info['Directory']
+            #                 directory_slug = '-' + directory
+            #                 directory_name = directory + ' - '
+            #                 season_regex = r'\d'
+            #                 season = int(re.search(season_regex, chapter_info['Directory']).group())
+            #             else:
+            #                 directory_slug = ''
+            #                 directory_name = ''
+            #                 season = 0
+            #             manga_id = selected_df['id'].values[0]
+            #             formatted_chapter_number = format_leading_chapter(format_chapter_number(chapter_info['Chapter']))
+            #             chapter_dict = {
+            #                 "name": '{}Chapter {}'.format(directory_name,
+            #                                                 format_chapter_number(item['Chapter'])),
+            #                 "slug": item['IndexName'].lower() + directory_slug.lower() + '-chapter-' + format_chapter_number(
+            #                     item['Chapter']).replace(
+            #                     '.',
+            #                     '-'),
+            #                 "original": chapter_url,
+            #                 "published": item['Date'],
+            #                 "manga_id": manga_id,
+            #                 "ordinal": float(format_chapter_number(item['Chapter'])),
+            #                 'resource_status':'STORAGE',
+            #                 "season": season,
+            #                 'status': 1,
+            #                 'total_view': 0,
+            #                 'created_by': 0,
+            #                 'updated_by': 0,
+            #                 'deleted_by': 0,
+            #                 'created_at': item['Date'],
+            #                 'updated_at': item['Date'],
+            #             }
         
-        return super().update_chapter()
         
         
     def extract_manga_info(self,manga):
@@ -32,9 +110,6 @@ class MangaseeCrawler(Crawler):
             manga_slug = manga['i']
             manga_url = f'https://mangasee123.com/manga/{manga_slug}'
             logging.info(manga_url)
-            header = {
-                'User-Agent':'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1667.0 Safari/537.36'
-            }
             soup = get_soup(manga_url, header=header)
             regex = r'vm.Chapters\s=\s.{0,};'
             script = soup.findAll('script')[-1].text
@@ -66,11 +141,11 @@ class MangaseeCrawler(Crawler):
                         'chapter_source': chapter_source
                     }
                     list_chapters_info.append(chapter_info_dict)
-            final_dict = {'url': manga_slug,'count_chapters': manga_count_chapters, 'chapters': list_chapters_info}
-            print(final_dict)
-            return final_dict
+                final_dict = {'url': manga_slug,'count_chapters': manga_count_chapters, 'chapters': list_chapters_info}
+                logging.info(final_dict)
+                save_to_json(manga_slug, final_dict)
         except Exception as ex:
-            return None
+            logging.error(str(ex))
         
     def string_to_json(self, chapter_str):
         if not chapter_str.endswith('}'):
