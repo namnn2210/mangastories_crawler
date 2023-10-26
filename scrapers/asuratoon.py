@@ -4,6 +4,7 @@ import concurrent.futures
 from connections.connection import Connection
 from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
+from .base.enums import ErrorCategoryEnum, MangaSourceEnum
 from utils.crawler_util import get_soup
 from configs.config import MAX_THREADS
 
@@ -33,6 +34,7 @@ class AsuratoonCrawler(Crawler):
         for future in futures:
             future.result()
             break
+
         
     def get_all_manga_urls(self):
         base_url = "https://asuratoon.com/manga/"
@@ -54,7 +56,6 @@ class AsuratoonCrawler(Crawler):
         manga_divs = page_soup.find_all('div',{'class':'bsx'})
         for manga in manga_divs:
             manga_url = manga.find('a')['href']
-            logging.info(manga_url)
             list_mangas.append(manga_url)
         next_page_link = page_soup.find('div', {'class': 'hpage'}).find('a',{'class':'r'})
         if next_page_link:
@@ -67,20 +68,58 @@ class AsuratoonCrawler(Crawler):
         logging.info(manga_url)
         manga_soup = get_soup(manga_url,headers)
         manga_slug = '-'.join(manga_url.split('/')[-2].split('-')[1:])
-        list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
-        manga_count_chapters = len(list_chapters)
+        manga_thumb = manga_soup.find('div',{'class':'thumb'}).find('img')['src']
+        # Manga detail
+        manga_description = manga_soup.find('div',{'itemprop':'description'}).find('p').text
+        info_box = manga_soup.find('div',{'class':'infox'})
+        list_details = info_box.find_all('div',{'class':'flex-wrap'})
+        list_genres = info_box.find_all('div',{'class':'wd-full'})[1]
         
-        self.process_list_chapters(list_chapters=list_chapters)
+        list_processed_detail, list_processed_genres = self.process_detail(list_details,list_genres)
+        
+        # list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
+        # manga_count_chapters = len(list_chapters)
+        
+        # list_chapters_info = self.process_list_chapters(list_chapters=list_chapters)
+        # final_dict = {'url': manga_slug,'count_chapters': manga_count_chapters, 'chapters': list_chapters_info, 'source_site':MangaSourceEnum.ASURATOON.value}
+        # logging.info(final_dict)
+        
+    def process_detail(self, list_details, list_genres):
+        list_processed_detail = []
+        for detail in list_details:
+            list_detail_info = detail.find_all('div',{'class':'fmed'})
+            for info in list_detail_info:
+                b_tag = info.find('b').text
+                if b_tag == 'Posted On':
+                    value = info.find('span').text
+                    list_processed_detail.append({'published':value})
+                    
+                elif b_tag == 'Author':
+                    value = info.find('span').text
+                    list_processed_detail.append({'author':value})
+        a_tags = list_genres.find_all('a')
+        list_processed_genres = [tag.text for tag in a_tags]
+        return list_processed_detail, list_processed_genres
         
     def process_list_chapters(self, list_chapters):
+        list_chapters_info = []
         for chapter in list_chapters:
+            chapter_num = chapter['data-num']
             chapter_url = chapter.find('div',{'class':'eph-num'}).find('a')['href']
-            logging.info(chapter_url)
             chapter_soup = get_soup(chapter_url,headers)
             reader_area = chapter_soup.find('div',{'id':'readerarea'})
             list_images = reader_area.find_all('img',{'decoding':'async'})
-            list_image_urls = [image['src'] for image in list_images]
-            break
+            list_image_urls = []
+            for index, image in enumerate(list_images):
+                list_image_urls.append({'img_count':index, 'img_url':image['src']})
+            chapter_info_dict = {
+                'chapter_num':chapter_num,
+                'chapter_url':chapter_url,
+                'image_urls':list_image_urls,
+                'chapter_source': 'https://asuratoon.com'
+            }
+            list_chapters_info.append(chapter_info_dict)
+        return list_chapters_info
     
     def update_chapter(self):
         return super().update_chapter()
