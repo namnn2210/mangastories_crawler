@@ -1,13 +1,8 @@
-from enum import Enum
-
+from scrapers.base.enums import MangaSourceEnum
 from sqlalchemy.dialects.mysql import insert
 from connections.connection import Connection
 from models.entities import MangaSource, Manga, MangaSourceRelations
 
-class MangaSourceEnum(Enum):
-    MANGASEE = 'mangasee'
-    MANHUAUS = 'manhuaus'
-    
 
 class MangaSourceWriter:
     def __init__(self):

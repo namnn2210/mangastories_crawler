@@ -2,12 +2,18 @@ from bs4 import BeautifulSoup
 from urllib.request import Request, urlopen
 from PIL import ImageFile, Image
 from configs.config import WEBP_QUALITY
+from hashids import Hashids
+from io import BytesIO
 
+
+import requests
 import json
 import io
+import logging
 
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 def get_soup(url, header):
     return BeautifulSoup(urlopen(Request(url=url, headers=header)), 'html.parser')
@@ -49,6 +55,11 @@ def format_chapter_number(chapter):
         return '{}.{}'.format(int(chapter[1:-1]), chapter[-1])
     return str(int(chapter[1:-1]))
 
+def hashidx(id):
+    hashids = Hashids(
+        salt='TIND', alphabet='abcdefghijklmnopqrstuvwxyz1234567890', min_length=7)
+    return hashids.encode(id)
+
 def resize_image(image, new_height):
 
     # Calculate the resizing factor based on the new height and original height
@@ -80,3 +91,19 @@ def watermark_with_transparency_io(io_img, watermark_image_path):
     img_byte_arr = io.BytesIO()
     transparent.save(img_byte_arr, format='webp', quality=WEBP_QUALITY)
     return img_byte_arr.getvalue()
+
+
+def image_s3_upload(s3, root_directory, image_url, manga_no, formatted_img_count, slug, season, bucket):
+    # s3 = s3_connect()
+    img = watermark_with_transparency_io(
+        BytesIO(requests.get(image_url).content), 'watermark/new_watermark.png')
+    # resized_image = resize_img(img)
+    img_name = '{}.webp'.format(formatted_img_count)
+    manga_ordinal = format_leading_chapter(int(float(manga_no)))
+    season_path = format_leading_part(int(season))
+    manga_part = format_leading_part(int(float(manga_no) % 1 * 10))
+    img_src = '{}/{}/{}/{}/{}/{}'.format(root_directory, slug.lower(),
+                                         season_path, manga_ordinal, manga_part, img_name)
+    logging.info(img_src)
+    s3.put_object(Bucket=bucket, Key=img_src, Body=img,
+                  ACL='public-read', ContentType='image/webp')

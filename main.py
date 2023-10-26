@@ -1,4 +1,6 @@
 from scrapers.mangasee import MangaseeCrawlerFactory
+from scrapers.asuratoon import AsuratoonCrawlerFactory
+
 from sources.manga_sources import MangaSourceWriter
 
 def create_and_run_crawler(factory):
@@ -6,8 +8,4 @@ def create_and_run_crawler(factory):
     crawler.crawl()
 
 if __name__ == "__main__":
-    website1_factory = MangaseeCrawlerFactory()
-    # create_and_run_crawler(website1_factory)
-    website1_factory.create_crawler().update_chapter()
-    # manga_source_writer = MangaSourceWriter()
-    # manga_source_writer.add_manga_source_relations()
+    asurcatoon = AsuratoonCrawlerFactory().create_crawler().crawl()

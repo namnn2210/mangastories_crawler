@@ -9,6 +9,9 @@ class Crawler(ABC):
     @abstractmethod
     def update_chapter(self):
         pass
+    @abstractmethod
+    def update_manga(self):
+        pass
 
     def default_user_agent(self):
         """Get default user agent to whole project"""
