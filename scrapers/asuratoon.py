@@ -74,6 +74,7 @@ class AsuratoonCrawler(Crawler):
         manga_slug = '-'.join(manga_url.split('/')[-2].split('-')[1:])
         manga_name = manga_soup.find('h1',{'class':'entry-title'}).text
         manga_thumb = manga_soup.find('div',{'class':'thumb'}).find('img')['src']
+        manga_type = manga_soup.find('span',{'class':'type'}).text
         info_box = manga_soup.find('div',{'class':'infox'})
         list_details = info_box.find_all('div',{'class':'flex-wrap'})
         list_genres = info_box.find_all('div',{'class':'wd-full'})[1]
@@ -90,7 +91,11 @@ class AsuratoonCrawler(Crawler):
             'slug': manga_slug,
             'thumb':manga_thumb,
             'count_chapters': manga_count_chapters, 
-            'chapters': list_chapters_info, 
+            'chapters': list_chapters_info,
+            'official_translation':'',
+            'rss':'RSS Feed',
+            'type':manga_type,
+            'alternative_name':'',
             'source_site':MangaSourceEnum.ASURATOON.value
             }
         final_dict['description'] = manga_soup.find('div',{'itemprop':'description'}).find('p').text + ' (Source: Mangamonster.net)'
