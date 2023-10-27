@@ -5,6 +5,7 @@ from connections.connection import Connection
 from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
+from models.entities import Manga
 from utils.crawler_util import get_soup
 from configs.config import MAX_THREADS
 
@@ -24,12 +25,15 @@ class AsuratoonCrawler(Crawler):
     
     def crawl(self):
         logging.info('Crawling all mangas from Asuratoon...')
+        mongo_client = Connection().mongo_connect()
+        mongo_db = mongo_client['mangamonster']
+        mongo_collection = mongo_db['tx_mangas']
         
         # Crawl multiple pages
         list_manga_urls = self.get_all_manga_urls()
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            futures = [executor.submit(self.extract_manga_info, manga_url) for manga_url in list_manga_urls]
+            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection) for manga_url in list_manga_urls]
             
         for future in futures:
             future.result()
@@ -64,25 +68,45 @@ class AsuratoonCrawler(Crawler):
         return list_mangas, None
     
     # Extract manga info
-    def extract_manga_info(self,manga_url):
+    def extract_manga_info(self,manga_url, mongo_collection):
         logging.info(manga_url)
         manga_soup = get_soup(manga_url,headers)
         manga_slug = '-'.join(manga_url.split('/')[-2].split('-')[1:])
+        manga_name = manga_soup.find('h1',{'class':'entry-title'}).text
         manga_thumb = manga_soup.find('div',{'class':'thumb'}).find('img')['src']
-        # Manga detail
-        manga_description = manga_soup.find('div',{'itemprop':'description'}).find('p').text
         info_box = manga_soup.find('div',{'class':'infox'})
         list_details = info_box.find_all('div',{'class':'flex-wrap'})
         list_genres = info_box.find_all('div',{'class':'wd-full'})[1]
         
         list_processed_detail, list_processed_genres = self.process_detail(list_details,list_genres)
+ 
+        list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
+        manga_count_chapters = len(list_chapters)
         
-        # list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
-        # manga_count_chapters = len(list_chapters)
+        list_chapters_info = self.process_list_chapters(list_chapters=list_chapters)
+        final_dict = {
+            'name':manga_name,
+            'original':manga_url,
+            'slug': manga_slug,
+            'thumb':manga_thumb,
+            'count_chapters': manga_count_chapters, 
+            'chapters': list_chapters_info, 
+            'source_site':MangaSourceEnum.ASURATOON.value
+            }
+        final_dict['description'] = manga_soup.find('div',{'itemprop':'description'}).find('p').text + ' (Source: Mangamonster.net)'
+        final_dict['genre'] = ','.join(list_processed_genres)
+        for detail_dict in list_processed_detail:
+            key, value = next(iter(detail_dict.items()))
+            if key == 'author' and value == '-':
+                final_dict[key] = '' 
+            else:
+                final_dict[key] = value 
         
-        # list_chapters_info = self.process_list_chapters(list_chapters=list_chapters)
-        # final_dict = {'url': manga_slug,'count_chapters': manga_count_chapters, 'chapters': list_chapters_info, 'source_site':MangaSourceEnum.ASURATOON.value}
-        # logging.info(final_dict)
+        logging.info(final_dict)
+        # Insert or Update 
+        filter_criteria = {"url": final_dict["url"]}
+        mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
+            
         
     def process_detail(self, list_details, list_genres):
         list_processed_detail = []
@@ -92,11 +116,11 @@ class AsuratoonCrawler(Crawler):
                 b_tag = info.find('b').text
                 if b_tag == 'Posted On':
                     value = info.find('span').text
-                    list_processed_detail.append({'published':value})
+                    list_processed_detail.append({'published':value.replace('\r','').replace('\t','').replace('\n','')})
                     
                 elif b_tag == 'Author':
                     value = info.find('span').text
-                    list_processed_detail.append({'author':value})
+                    list_processed_detail.append({'author':value.replace('\r','').replace('\t','').replace('\n','')})
         a_tags = list_genres.find_all('a')
         list_processed_genres = [tag.text for tag in a_tags]
         return list_processed_detail, list_processed_genres
@@ -126,4 +150,24 @@ class AsuratoonCrawler(Crawler):
     
     def update_manga(self):
         list_manga_urls = self.get_all_manga_urls()
-        return super().update_manga()
+        db = Connection().mysql_connect()
+        mongo_client = Connection().mongo_connect()
+        mongo_db = mongo_client['mangamonster']
+        mongo_collection = mongo_db['tx_mangas']
+        list_manga_update = []
+        for manga_url in list_manga_urls:
+            manga_slug = '-'.join(manga_url.split('/')[-2].split('-')[1:])
+            manga_query = db.query(Manga).where(Manga.slug == manga_slug)
+            if manga_query.first() is None:
+                list_manga_update.append(manga_url)
+                
+        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection) for manga_url in list_manga_urls]
+            
+        for future in futures:
+            future.result()
+            break
+        
+    def push_to_db(self):
+        return super().push_to_db()
+        

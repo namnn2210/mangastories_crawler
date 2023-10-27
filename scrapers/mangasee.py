@@ -35,11 +35,21 @@ class MangaseeCrawler(Crawler):
 
     def crawl(self):
         logging.info('Crawling all mangas from Mangasee...')
+        # Connect MongoDB
+        mongo_client = Connection().mongo_connect()
+        mongo_db = mongo_client['mangamonster']
+        mongo_collection = mongo_db['tx_mangas']
+        
         list_manga_url = 'https://mangasee123.com/_search.php'
         list_manga_request = requests.post(list_manga_url).json()
+        futures = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-        # Submit each manga for processing to the executor
-            futures = [executor.submit(self.extract_manga_info, manga) for manga in list_manga_request]
+            # Submit each manga for processing to the executor
+            for manga in list_manga_request:
+                manga_slug = manga['i']
+                manga_url = f'https://mangasee123.com/manga/{manga_slug}'
+                future = executor.submit(self.extract_manga_info, manga_url, manga_slug, mongo_collection)
+                futures.append(future)
 
             # Wait for all tasks to complete and get the results
         for future in futures:
@@ -168,7 +178,7 @@ class MangaseeCrawler(Crawler):
         mongo_client = Connection().mongo_connect()
         mongo_db = mongo_client['mangamonster']
         tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
-        
+        tx_mangas = mongo_db['tx_mangas']
         
         manga_url = 'https://mangasee123.com/'
         soup = get_soup(manga_url, header=header)
@@ -184,100 +194,66 @@ class MangaseeCrawler(Crawler):
             existed_manga = db.query(Manga).where(Manga.slug == manga_json['IndexName'].lower()).first()
             if existed_manga is None:
                 manga_url = 'https://mangasee123.com/manga/{}'.format(manga_json['IndexName'])
-                logging.info(manga_url)
-                manga_soup = get_soup(manga_url, header=header)
-                manga_name = manga_soup.find('title').text.split('|')[0].strip()
-                manga_thumb = manga_soup.find('meta', {'property': 'og:image'})['content']
-                img = Image.open(BytesIO(requests.get(manga_thumb).content))
-                # if not os.path.exists(manga_thumb_image_folder):
-                #     os.mkdir(manga_thumb_image_folder)
-                today = datetime.now()
-                today_str = '{}/{}/{}'.format(str(today.year),
-                                                str(today.month), str(today.day))
-                thumb_path = 'images/manga/{}/{}.jpg'.format(
-                    today_str, manga_json['IndexName'].lower())
-                thumb_save_path = f'/www-data/mangamonster.com/storage/app/public/{thumb_path}'
-                logging.info(thumb_save_path)
-                os.makedirs(os.path.dirname(thumb_save_path), exist_ok=True)
-                img.convert('RGB').save(thumb_save_path)
-                list_group_flush = manga_soup.find('ul', {'class': 'list-group-flush'})
-                try:
-                    info_group = list_group_flush.find_all('li', {'class': 'list-group-item'})[2]
-                except Exception as ex:
-                    continue
-                manga_raw_info_dict = {}
-                list_info = str(info_group).split("\n\n")
-                for info in list_info[:-1]:
-                    new_info = info.strip(
-                        """ <li class="list-group-item {{vm.ShowInfoMobile ? '' : 'd-none d-md-block' }}"> """)
-                    new_info_soup = BeautifulSoup(new_info, 'html.parser')
-                    if new_info_soup.find('span') is not None:
-                        field = new_info_soup.find('span').text.replace('\n', '').replace('(s)', '').replace(':',
-                                                                                                                '').lower()
-                        if len(new_info_soup.find_all('a')) > 0:
-                            value = ','.join([x.text.strip('</')
-                                                for x in new_info_soup.find_all('a')])
-                        else:
-                            value = ' '.join(new_info_soup.find(
-                                'div', {'class': 'top-5'}).text.strip('</').split())
-                        if field != 'status':
-                            if len(field.split(' ')) > 1:
-                                field = '_'.join(field.split(' '))
-                            if field == 'released':
-                                field = 'published'
-                            if field == 'description':
-                                value = " ".join(value.split()) + \
-                                    ' (Source: Mangamonster.net)'
-                            manga_raw_info_dict[field] = value
+                self.extract_manga_info(manga_url=manga_url, manga_slug=manga_json['IndexName'],mongo_collection=tx_mangas)
+                # manga_thumb = manga_soup.find('meta', {'property': 'og:image'})['content']
+                # img = Image.open(BytesIO(requests.get(manga_thumb).content))
+                # today = datetime.now()
+                # today_str = '{}/{}/{}'.format(str(today.year),
+                #                                 str(today.month), str(today.day))
+                # thumb_path = 'images/manga/{}/{}.jpg'.format(
+                #     today_str, manga_json['IndexName'].lower())
+                # thumb_save_path = f'/www-data/mangamonster.com/storage/app/public/{thumb_path}'
+                # logging.info(thumb_save_path)
+                # os.makedirs(os.path.dirname(thumb_save_path), exist_ok=True)
+                # img.convert('RGB').save(thumb_save_path)
+                # manga_dict = {
+                #     'name': manga_name,
+                #     'slug': manga_json['IndexName'].lower(),
+                #     'original': manga_url,
+                #     'thumb': thumb_path,
+                #     'type': 1,
+                #     'status': 1,
+                #     'total_view': 0,
+                #     'created_by': 0,
+                #     'updated_by': 0,
+                #     'deleted_by': 0,
+                #     'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+                #     'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+                #     'slug_original': manga_json['IndexName']
+                # }
+                # manga_dict.update(manga_raw_info_dict)
+                # logging.info('Manga dict %s' % manga_dict)
 
-                manga_dict = {
-                    'name': manga_name,
-                    'slug': manga_json['IndexName'].lower(),
-                    'original': manga_url,
-                    'thumb': thumb_path,
-                    'type': 1,
-                    'status': 1,
-                    'total_view': 0,
-                    'created_by': 0,
-                    'updated_by': 0,
-                    'deleted_by': 0,
-                    'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
-                    'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
-                    'slug_original': manga_json['IndexName']
-                }
-                manga_dict.update(manga_raw_info_dict)
-                logging.info('Manga dict %s' % manga_dict)
-
-                if 'alternate_name' in manga_dict.keys():
-                    del manga_dict['alternate_name']
-                type_text = ''
-                if manga_dict['type'] == 1:
-                    type_text = 'Manga'
-                elif manga_dict['type'] == 2:
-                    type_text = 'Manhua'
-                manga_dict['search_text'] = manga_dict.get('name', '') + manga_dict.get(
-                    'description', '') + manga_dict.get('author', '') + manga_dict.get('genre', '')
-                manga_dict['search_field'] = manga_dict.get(
-                    'name', '') + type_text + manga_dict.get('author', '') + manga_dict.get('genre', '')
+                # if 'alternate_name' in manga_dict.keys():
+                #     del manga_dict['alternate_name']
+                # type_text = ''
+                # if manga_dict['type'] == 1:
+                #     type_text = 'Manga'
+                # elif manga_dict['type'] == 2:
+                #     type_text = 'Manhua'
+                # manga_dict['search_text'] = manga_dict.get('name', '') + manga_dict.get(
+                #     'description', '') + manga_dict.get('author', '') + manga_dict.get('genre', '')
+                # manga_dict['search_field'] = manga_dict.get(
+                #     'name', '') + type_text + manga_dict.get('author', '') + manga_dict.get('genre', '')
                 
-                manga_obj = Manga(**manga_dict)
-                try:
-                    db.add(manga_obj)
-                    db.commit()
-                    logging.info('NEW MANGA INSERTED')
-                except Exception as ex:
-                    db.rollback()
+                # manga_obj = Manga(**manga_dict)
+                # try:
+                #     db.add(manga_obj)
+                #     db.commit()
+                #     logging.info('NEW MANGA INSERTED')
+                # except Exception as ex:
+                #     db.rollback()
                 
-                query_new_manga = db.query(Manga).where(Manga.slug == manga_dict['slug'])
-                new_manga = query_new_manga.first()
-                if new_manga is not None:
-                    idx = hashidx(new_manga.id)
-                    update_value = {
-                        'idx': idx,
-                        'local_url':'https://mangamonster.net/' + manga_json['IndexName'].lower() + '-m' + idx
-                    }
-                    query_new_manga.update(update_value)
-                    db.commit()
+                # query_new_manga = db.query(Manga).where(Manga.slug == manga_dict['slug'])
+                # new_manga = query_new_manga.first()
+                # if new_manga is not None:
+                #     idx = hashidx(new_manga.id)
+                #     update_value = {
+                #         'idx': idx,
+                #         'local_url':'https://mangamonster.net/' + manga_json['IndexName'].lower() + '-m' + idx
+                #     }
+                #     query_new_manga.update(update_value)
+                #     db.commit()
                 
                 list_buckets = [item.value for item in MangaMonsterBucketEnum]
                 selected_bucket = random.choice(list_buckets)
@@ -287,25 +263,48 @@ class MangaseeCrawler(Crawler):
                 }
                 tx_manga_bucket_mapping.insert_one(bucket_mapping_data)
                 
-                db.close()
+                # db.close()
             else:
                 existed_manga_bucket_mapping = tx_manga_bucket_mapping.find_one({'url':manga_json['IndexName']})
                 logging.info('Manga %s existed in bucket %s with ID %s' % (manga_json['IndexName'], existed_manga_bucket_mapping['bucket'], existed_manga.id))
 
+    def process_detail(self, manga_soup):
+        list_group_flush = manga_soup.find('ul', {'class': 'list-group-flush'})
+        info_group = list_group_flush.find_all('li', {'class': 'list-group-item'})[2]
+        manga_raw_info_dict = {}
+        list_info = str(info_group).split("\n\n")
+        for info in list_info[:-1]:
+            new_info = info.strip(
+                """ <li class="list-group-item {{vm.ShowInfoMobile ? '' : 'd-none d-md-block' }}"> """)
+            new_info_soup = BeautifulSoup(new_info, 'html.parser')
+            if new_info_soup.find('span') is not None:
+                field = new_info_soup.find('span').text.replace('\n', '').replace('(s)', '').replace(':',
+                                                                                                        '').lower()
+                if len(new_info_soup.find_all('a')) > 0:
+                    value = ','.join([x.text.strip('</')
+                                        for x in new_info_soup.find_all('a')])
+                else:
+                    value = ' '.join(new_info_soup.find(
+                        'div', {'class': 'top-5'}).text.strip('</').split())
+                if field != 'status':
+                    if len(field.split(' ')) > 1:
+                        field = '_'.join(field.split(' '))
+                    if field == 'released':
+                        field = 'published'
+                    if field == 'description':
+                        value = " ".join(value.split()) + \
+                            ' (Source: Mangamonster.net)'
+                    manga_raw_info_dict[field] = value
+        return manga_raw_info_dict
         
-    def extract_manga_info(self,manga):
+    def extract_manga_info(self,manga_url,manga_slug, mongo_collection):
         try:
-            # Connect MongoDB
-            mongo_client = Connection().mongo_connect()
-            mongo_db = mongo_client['mangamonster']
-            mongo_collection = mongo_db['tx_mangas']
-                
-            manga_slug = manga['i']
-            manga_url = f'https://mangasee123.com/manga/{manga_slug}'
             logging.info(manga_url)
-            soup = get_soup(manga_url, header=header)
+            manga_soup = get_soup(manga_url, header=header)
+            manga_name = manga_soup.find('meta', {'property': 'og:title'})['content'].split('|')[0].strip()
+            manga_thumb = manga_soup.find('meta', {'property': 'og:image'})['content']
             regex = r'vm.Chapters\s=\s.{0,};'
-            script = soup.findAll('script')[-1].text
+            script = manga_soup.findAll('script')[-1].text
             list_chapters_str_regex = re.search(regex, script)
             if list_chapters_str_regex is None:
                 print(f'{manga_url} error list_chapters_str_regex')
@@ -320,30 +319,34 @@ class MangaseeCrawler(Crawler):
                     chapter_json = self.string_to_json(chapter)   
                     chapter_encoded = self.chapter_encode(chapter_json['Chapter'])
                     chapter_url = 'https://mangasee123.com/read-online/{}{}.html'.format(manga_slug, chapter_encoded)
-                    chapter_soup = get_soup(chapter_url, header=header)
-                    chapter_script = chapter_soup.findAll('script')[-1].text
-                    chapter_regex = r'vm.CurChapter\s=\s.{0,};'
-                    chapter_source_regex = r'vm.CurPathName\s=\s.{0,};'
-                    chapter_source_str_regex = re.search(chapter_source_regex, chapter_script)
-                    chapter_source_str = chapter_source_str_regex.group()
-                    chapter_source = chapter_source_str.replace('vm.CurPathName = ', '').replace(';', '').replace('"', '')
-                    chapter_str = re.search(chapter_regex, chapter_script).group()
-                    chapter_info = json.loads(chapter_str.replace('vm.CurChapter = ', '').replace(';', ''))
+                    chapter_source, chapter_info, index_name = self.get_chapter_info(chapter_url)
                     chapter_info_dict = {
                         'chapter_info': chapter_info, 
                         'chapter_source': chapter_source
                     }
                     list_chapters_info.append(chapter_info_dict)
-                final_dict = {'url': manga_slug,'count_chapters': manga_count_chapters, 'chapters': list_chapters_info, 'source_site':MangaSourceEnum.MANGASEE.value}
-                
-                # Insert or Update 
-                filter_criteria = {"url": final_dict["url"]}
-                mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
-                # mongo_collection.insert_one(final_dict)
-                logging.info('%s INSERTED TO DB' % manga_url)
-            mongo_db.close()
+            final_dict = {
+                'name':manga_name,
+                'original':manga_url,
+                'slug': manga_slug,
+                'thumb':manga_thumb,
+                'count_chapters': manga_count_chapters, 
+                'chapters': list_chapters_info, 
+                'source_site':MangaSourceEnum.MANGASEE.value}
+            manga_raw_info_dict = self.process_detail(manga_soup)
+            final_dict.update(manga_raw_info_dict)
+            
+            # Insert or Update 
+            filter_criteria = {"slug": final_dict["slug"]}
+            mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
+            # mongo_collection.insert_one(final_dict)
+            logging.info('%s INSERTED TO DB' % manga_url)
         except Exception as ex:
             logging.error(str(ex))
+            
+            
+    def push_to_db(self):
+        return super().push_to_db()
         
     def string_to_json(self, chapter_str):
         if not chapter_str.endswith('}'):

@@ -9,8 +9,13 @@ class Crawler(ABC):
     @abstractmethod
     def update_chapter(self):
         pass
+    
     @abstractmethod
     def update_manga(self):
+        pass
+    
+    @abstractmethod
+    def push_to_db(self):
         pass
 
     def default_user_agent(self):
