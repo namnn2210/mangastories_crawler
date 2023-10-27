@@ -4,8 +4,11 @@ from PIL import ImageFile, Image
 from configs.config import WEBP_QUALITY
 from hashids import Hashids
 from io import BytesIO
+from datetime import datetime
 
 
+import pytz
+import os
 import requests
 import json
 import io
@@ -107,3 +110,42 @@ def image_s3_upload(s3, root_directory, image_url, manga_no, formatted_img_count
     logging.info(img_src)
     s3.put_object(Bucket=bucket, Key=img_src, Body=img,
                   ACL='public-read', ContentType='image/webp')
+    
+def manga_builder(manga_obj_dict):
+    img = Image.open(BytesIO(requests.get(manga_obj_dict['thumb']).content))
+    today = datetime.now()
+    today_str = '{}/{}/{}'.format(str(today.year),
+                                    str(today.month), str(today.day))
+    thumb_path = 'images/manga/{}/{}.jpg'.format(
+        today_str, manga_obj_dict['slug'].lower())
+    thumb_save_path = f'/www-data/mangamonster.com/storage/app/public/{thumb_path}'
+    logging.info(thumb_save_path)
+    os.makedirs(os.path.dirname(thumb_save_path), exist_ok=True)
+    img.convert('RGB').save(thumb_save_path)
+    if manga_obj_dict['type'] == 'Manga':
+        manga_type = 1
+    elif manga_obj_dict['type'] == 'Manhua':
+        manga_type = 2
+    manga_dict = {
+        'name': manga_obj_dict['name'],
+        'slug': manga_obj_dict['slug'].lower(),
+        'original': manga_obj_dict['original'],
+        'thumb': thumb_path,
+        'type': manga_type,
+        'status': 1,
+        'total_view': 0,
+        'created_by': 0,
+        'updated_by': 0,
+        'deleted_by': 0,
+        'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+        'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+        'slug_original': manga_obj_dict['slug']
+    }
+    
+    manga_dict['search_text'] = manga_dict.get('name', '') + manga_dict.get(
+        'description', '') + manga_dict.get('author', '') + manga_dict.get('genre', '')
+    manga_dict['search_field'] = manga_dict.get(
+        'name', '') + manga_obj_dict['type'] + manga_dict.get('author', '') + manga_dict.get('genre', '')
+    
+    return manga_dict
+    

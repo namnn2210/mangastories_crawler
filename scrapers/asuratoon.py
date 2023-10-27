@@ -6,8 +6,10 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
 from models.entities import Manga
-from utils.crawler_util import get_soup
+from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part
 from configs.config import MAX_THREADS
+from datetime import datetime
+import pytz
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
@@ -82,7 +84,7 @@ class AsuratoonCrawler(Crawler):
         list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
         manga_count_chapters = len(list_chapters)
         
-        list_chapters_info = self.process_list_chapters(list_chapters=list_chapters)
+        list_chapters_info = self.process_list_chapters(list_chapters=list_chapters, manga_slug=manga_slug)
         final_dict = {
             'name':manga_name,
             'original':manga_url,
@@ -126,7 +128,7 @@ class AsuratoonCrawler(Crawler):
         list_processed_genres = [tag.text for tag in a_tags]
         return list_processed_detail, list_processed_genres
         
-    def process_list_chapters(self, list_chapters):
+    def process_list_chapters(self, list_chapters,manga_slug):
         list_chapters_info = []
         for chapter in list_chapters:
             chapter_num = chapter['data-num']
@@ -136,12 +138,28 @@ class AsuratoonCrawler(Crawler):
             list_images = reader_area.find_all('img',{'decoding':'async'})
             list_image_urls = []
             for index, image in enumerate(list_images):
+                original_url = image['src']
+                img_name = '{}.webp'.format(format_leading_img_count(index+1))
+                manga_ordinal = format_leading_chapter(int(float(format_chapter_number(chapter_info['Chapter']))))
+                season_path = format_leading_part(0)
+                manga_part = format_leading_part(int(float(format_chapter_number(chapter_info['Chapter'])) % 1 * 10))
+                s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
+                                                    season_path, manga_ordinal, manga_part, img_name)
+                list_image_urls.append({
+                    'index':i,
+                    'original':original_url,
+                    's3':s3_url
+                })
                 list_image_urls.append({'img_count':index, 'img_url':image['src']})
+            chapter_number = chapter_url.split('chapter-')[1].replace('\\','').replace('-','.')
             chapter_info_dict = {
-                'chapter_num':chapter_num,
-                'chapter_url':chapter_url,
+                'ordinal':chapter_number,
+                'slug':manga_slug + '-chapter-',
+                'original':chapter_url,
+                'resource_status': 'STORAGE',
+                'season':0,
                 'image_urls':list_image_urls,
-                'chapter_source': 'https://asuratoon.com'
+                'date':datetime.now(tz=pytz.timezone('America/Chicago'))
             }
             list_chapters_info.append(chapter_info_dict)
         return list_chapters_info
