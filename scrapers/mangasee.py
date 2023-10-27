@@ -13,7 +13,7 @@ from .base.crawler_factory import CrawlerFactory
 from .base.enums import MangaMonsterBucketEnum, ErrorCategoryEnum, MangaSourceEnum
 from configs.config import MAX_THREADS, S3_ROOT_DIRECTORY,INSERT_QUEUE
 from utils.crawler_util import get_soup, format_chapter_number, format_leading_chapter, hashidx, image_s3_upload, format_leading_img_count, format_leading_part
-from models.entities import Manga, MangaChapters, MangaChapterResources
+from models.entities import Manga, MangaChapters, MangaChapterResources, MangaSource
 from datetime import datetime
 from PIL import Image
 from io import BytesIO
@@ -191,69 +191,10 @@ class MangaseeCrawler(Crawler):
         for manga in list_mangas:
             manga_json = self.string_to_json(manga)
             # Check if manga existed
-            existed_manga = db.query(Manga).where(Manga.slug == manga_json['IndexName'].lower()).first()
+            existed_manga = db.query(Manga).where(Manga.slug == manga_json['IndexName'].lower()).where(Manga.status == 1).first()
             if existed_manga is None:
                 manga_url = 'https://mangasee123.com/manga/{}'.format(manga_json['IndexName'])
                 self.extract_manga_info(manga_url=manga_url, manga_slug=manga_json['IndexName'],mongo_collection=tx_mangas)
-                # manga_thumb = manga_soup.find('meta', {'property': 'og:image'})['content']
-                # img = Image.open(BytesIO(requests.get(manga_thumb).content))
-                # today = datetime.now()
-                # today_str = '{}/{}/{}'.format(str(today.year),
-                #                                 str(today.month), str(today.day))
-                # thumb_path = 'images/manga/{}/{}.jpg'.format(
-                #     today_str, manga_json['IndexName'].lower())
-                # thumb_save_path = f'/www-data/mangamonster.com/storage/app/public/{thumb_path}'
-                # logging.info(thumb_save_path)
-                # os.makedirs(os.path.dirname(thumb_save_path), exist_ok=True)
-                # img.convert('RGB').save(thumb_save_path)
-                # manga_dict = {
-                #     'name': manga_name,
-                #     'slug': manga_json['IndexName'].lower(),
-                #     'original': manga_url,
-                #     'thumb': thumb_path,
-                #     'type': 1,
-                #     'status': 1,
-                #     'total_view': 0,
-                #     'created_by': 0,
-                #     'updated_by': 0,
-                #     'deleted_by': 0,
-                #     'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
-                #     'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
-                #     'slug_original': manga_json['IndexName']
-                # }
-                # manga_dict.update(manga_raw_info_dict)
-                # logging.info('Manga dict %s' % manga_dict)
-
-                # if 'alternate_name' in manga_dict.keys():
-                #     del manga_dict['alternate_name']
-                # type_text = ''
-                # if manga_dict['type'] == 1:
-                #     type_text = 'Manga'
-                # elif manga_dict['type'] == 2:
-                #     type_text = 'Manhua'
-                # manga_dict['search_text'] = manga_dict.get('name', '') + manga_dict.get(
-                #     'description', '') + manga_dict.get('author', '') + manga_dict.get('genre', '')
-                # manga_dict['search_field'] = manga_dict.get(
-                #     'name', '') + type_text + manga_dict.get('author', '') + manga_dict.get('genre', '')
-                
-                # manga_obj = Manga(**manga_dict)
-                # try:
-                #     db.add(manga_obj)
-                #     db.commit()
-                #     logging.info('NEW MANGA INSERTED')
-                # except Exception as ex:
-                #     db.rollback()
-                
-                # query_new_manga = db.query(Manga).where(Manga.slug == manga_dict['slug'])
-                # new_manga = query_new_manga.first()
-                # if new_manga is not None:
-                #     idx = hashidx(new_manga.id)
-                #     update_value = {
-                #         'idx': idx,
-                #         'local_url':'https://mangamonster.net/' + manga_json['IndexName'].lower() + '-m' + idx
-                #     }
-                #     query_new_manga.update(update_value)
-                #     db.commit()
                 
                 list_buckets = [item.value for item in MangaMonsterBucketEnum]
                 selected_bucket = random.choice(list_buckets)
@@ -262,8 +203,7 @@ class MangaseeCrawler(Crawler):
                     'bucket':selected_bucket
                 }
                 tx_manga_bucket_mapping.insert_one(bucket_mapping_data)
-                
-                # db.close()
+
             else:
                 existed_manga_bucket_mapping = tx_manga_bucket_mapping.find_one({'url':manga_json['IndexName']})
                 logging.info('Manga %s existed in bucket %s with ID %s' % (manga_json['IndexName'], existed_manga_bucket_mapping['bucket'], existed_manga.id))
@@ -345,7 +285,76 @@ class MangaseeCrawler(Crawler):
             logging.error(str(ex))
             
             
-    def push_to_db(self):
+    def push_to_db(self, mode='manga'):
+        # Connect DB
+        db = Connection().mysql_connect()
+        mongo_client = Connection().mongo_connect()
+        mongo_db = mongo_client['mangamonster']
+        tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
+        tx_mangas = mongo_db['tx_mangas']
+        list_mangas = tx_mangas.find({"source_site": MangaSourceEnum.MANGASEE.value})
+        for manga in list_mangas:
+            # Check if manga in DB:
+            existed_manga = db.query(Manga).where(Manga.slug == manga['slug'].lower()).first()
+            if existed_manga is None:
+                if mode == 'manga':
+                    img = Image.open(BytesIO(requests.get(manga['thumb']).content))
+                    today = datetime.now()
+                    today_str = '{}/{}/{}'.format(str(today.year),
+                                                    str(today.month), str(today.day))
+                    thumb_path = 'images/manga/{}/{}.jpg'.format(
+                        today_str, manga['slug'].lower())
+                    thumb_save_path = f'/www-data/mangamonster.com/storage/app/public/{thumb_path}'
+                    logging.info(thumb_save_path)
+                    os.makedirs(os.path.dirname(thumb_save_path), exist_ok=True)
+                    img.convert('RGB').save(thumb_save_path)
+                    if manga['type'] == 'Manga':
+                        manga_type = 1
+                    elif manga['type'] == 'Manhua':
+                        manga_type = 2
+                    manga_dict = {
+                        'name': manga['name'],
+                        'slug': manga['slug'].lower(),
+                        'original': manga['original'],
+                        'thumb': thumb_path,
+                        'type': manga_type,
+                        'status': 1,
+                        'total_view': 0,
+                        'created_by': 0,
+                        'updated_by': 0,
+                        'deleted_by': 0,
+                        'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+                        'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+                        'slug_original': manga['slug']
+                    }
+                    
+                    manga_dict['search_text'] = manga_dict.get('name', '') + manga_dict.get(
+                        'description', '') + manga_dict.get('author', '') + manga_dict.get('genre', '')
+                    manga_dict['search_field'] = manga_dict.get(
+                        'name', '') + manga['type'] + manga_dict.get('author', '') + manga_dict.get('genre', '')
+                    
+                    manga_obj = Manga(**manga_dict)
+                    try:
+                        db.add(manga_obj)
+                        db.commit()
+                        logging.info('NEW MANGA INSERTED')
+                    except Exception as ex:
+                        db.rollback()
+                        
+                    query_new_manga = db.query(Manga).where(Manga.slug == manga_dict['slug'])
+                    new_manga = query_new_manga.first()
+                    if new_manga is not None:
+                        idx = hashidx(new_manga.id)
+                        update_value = {
+                            'idx': idx,
+                            'local_url':'https://mangamonster.net/' + manga['slug'].lower() + '-m' + idx
+                        }
+                        query_new_manga.update(update_value)
+                        db.commit()
+                if mode == 'chapter':
+                    pass
+                
+                
         return super().push_to_db()
         
     def string_to_json(self, chapter_str):

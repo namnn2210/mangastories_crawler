@@ -37,7 +37,6 @@ class AsuratoonCrawler(Crawler):
             
         for future in futures:
             future.result()
-            break
 
         
     def get_all_manga_urls(self):
@@ -50,7 +49,6 @@ class AsuratoonCrawler(Crawler):
             logging.info("Processing: %s " % current_url)
             list_mangas, current_url = self.process_page_urls(current_url, base_url)
             list_manga_urls += list_mangas
-            break
         return list_manga_urls
         
     # Define a function to parse and process a page
@@ -106,10 +104,8 @@ class AsuratoonCrawler(Crawler):
                 final_dict[key] = '' 
             else:
                 final_dict[key] = value 
-        
-        logging.info(final_dict)
         # Insert or Update 
-        filter_criteria = {"url": final_dict["url"]}
+        filter_criteria = {"slug": final_dict["slug"]}
         mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
             
         

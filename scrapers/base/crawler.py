@@ -15,7 +15,13 @@ class Crawler(ABC):
         pass
     
     @abstractmethod
-    def push_to_db(self):
+    def push_to_db(self, mode='manga'):
+        """  
+            push_to_db mode: 
+                1. manga: push manga info to mysql
+                2. chapter: push chapter info to mysql 
+                3. all: push both manga info and chapters info to mysql
+        """
         pass
 
     def default_user_agent(self):
