@@ -10,8 +10,8 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import MangaMonsterBucketEnum, ErrorCategoryEnum, MangaSourceEnum
 from configs.config import MAX_THREADS, S3_ROOT_DIRECTORY,INSERT_QUEUE
-from utils.crawler_util import get_soup, format_chapter_number, format_leading_chapter, hashidx, image_s3_upload, format_leading_img_count, format_leading_part, manga_builder
-from models.entities import Manga, MangaChapters, MangaChapterResources, MangaSource
+from utils.crawler_util import get_soup, format_chapter_number, format_leading_chapter, hashidx, image_s3_upload, format_leading_img_count, format_leading_part, manga_builder, chapter_builder
+from models.entities import Manga, MangaChapters, MangaChapterResources
 from bs4 import BeautifulSoup
 
 
@@ -291,7 +291,7 @@ class MangaseeCrawler(Crawler):
         except Exception as ex:
             logging.error(str(ex))
             
-    def push_to_db(self, mode='manga'):
+    def push_to_db(self, mode='manga', insert=True):
         # Connect DB
         db = Connection().mysql_connect()
         mongo_client = Connection().mongo_connect()
@@ -301,9 +301,9 @@ class MangaseeCrawler(Crawler):
         list_mangas = tx_mangas.find({"source_site": MangaSourceEnum.MANGASEE.value})
         for manga in list_mangas:
             # Check if manga in DB:
-            existed_manga = db.query(Manga).where(Manga.slug == manga['slug'].lower()).where(Manga.status == 1)
+            existed_manga_query = db.query(Manga).where(Manga.slug == manga['slug'].lower()).where(Manga.status == 1)
             if mode == 'manga':
-                if existed_manga.first() is None:
+                if existed_manga_query.first() is None:
                     manga_dict = manga_builder(manga)
                     manga_obj = Manga(**manga_dict)
                     try:
@@ -324,8 +324,33 @@ class MangaseeCrawler(Crawler):
                         query_new_manga.update(update_value)
                         db.commit()
             if mode == 'chapter':
-                pass
-        
+                existed_manga = existed_manga_query.first()
+                if existed_manga is not None:
+                    db_manga_chapter = db.query(MangaChapters).where(MangaChapters.manga_id == existed_manga.id).where(MangaChapters.ordinal == manga.ordinal).where(MangaChapters.season == manga.season).where(MangaChapters.status == 1).first()
+                    if db_manga_chapter is None:
+                        processed_chapter_dict = chapter_builder(manga, existed_manga.id)
+                        # Insert to database
+                        for item in processed_chapter_dict:
+                            chapter_dict = item['chapter_dict']
+                            manga_chapter_obj = MangaChapters(**chapter_dict)
+                            
+                            chapter_query = db.query(MangaChapters).filter(MangaChapters.manga_id == existed_manga.id, MangaChapters.slug == manga_chapter_obj.slug, MangaChapters.season == manga_chapter_obj.season)
+
+                            chapter_count = chapter_query.count()
+                            if chapter_count == 0:
+                                try:
+                                    db.add(manga_chapter_obj)
+                                    db.commit()
+                                except Exception as ex:
+                                    db.rollback()
+                            else:
+                                logging.info('CHAPTER EXISTS')
+                                
+                            if insert:
+                                db_chapter_obj = chapter_query.first()
+                                resource_count = db.query(MangaChapterResources).filter(MangaChapterResources.manga_chapter_id == db_chapter_obj.id).count()
+                                if resource_count == item['pages']:
+                                    pass
     def string_to_json(self, chapter_str):
         if not chapter_str.endswith('}'):
             chapter_str += '}'
@@ -382,7 +407,7 @@ class MangaseeCrawler(Crawler):
     def insert_db(self,db, chapter_obj, row_id, pages):
 
         chapter_query = db.query(MangaChapters).filter(MangaChapters.manga_id == row_id,
-                                                    MangaChapters.slug == chapter_obj.slug, MangaChapters.name == chapter_obj.name)
+                                                    MangaChapters.slug == chapter_obj.slug, MangaChapters.season == chapter_obj.season)
 
         chapter_count = chapter_query.count()
         if chapter_count == 0:

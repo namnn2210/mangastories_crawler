@@ -148,4 +148,29 @@ def manga_builder(manga_obj_dict):
         'name', '') + manga_obj_dict['type'] + manga_dict.get('author', '') + manga_dict.get('genre', '')
     
     return manga_dict
+
+def chapter_builder(manga_obj_dict, manga_id):
+    chapters = manga_obj_dict['chapters']
+    processed_chapter_dict = []
+    for chapter in chapters:
+        chapter_dict = {
+            "name": 'S{} - Chapter {}'.format(chapter['season'], chapter['ordinal']),
+            "slug": chapter['slug'],
+            "original": chapter['original'],
+            "published": chapter['date'],
+            "manga_id": manga_id,
+            "ordinal": chapter['ordinal'],
+            'resource_status':chapter['resource_status'],
+            "season": chapter['season'],
+            'status': 1,
+            'total_view': 0,
+            'created_by': 0,
+            'updated_by': 0,
+            'deleted_by': 0,
+            'created_at': chapter['date'],
+            'updated_at': chapter['date'],
+        }
+        processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages':len(chapter['image_urls'])})
+    return processed_chapter_dict
+
     
