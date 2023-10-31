@@ -5,7 +5,9 @@ from configs.config import WEBP_QUALITY
 from hashids import Hashids
 from io import BytesIO
 from datetime import datetime
-
+from models.entities import Manga, MangaChapters, MangaChapterResources
+from scrapers.base.enums import MangaSourceEnum
+from connections.connection import Connection
 
 import pytz
 import os
@@ -18,13 +20,16 @@ import logging
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
+
 def get_soup(url, header):
     return BeautifulSoup(urlopen(Request(url=url, headers=header)), 'html.parser')
 
-def save_to_json(file_name,json_dict):
-    with open(f'json/{file_name}','r') as json_file:
+
+def save_to_json(file_name, json_dict):
+    with open(f'json/{file_name}', 'r') as json_file:
         json.dump(json_dict, json_file)
-        
+
+
 def format_leading_chapter(chapter):
     try:
         if int(chapter) >= 10 or int(chapter) < 10:
@@ -36,8 +41,8 @@ def format_leading_chapter(chapter):
     except ValueError as ex:
         float_chapter = float(chapter)
         return str(float_chapter).zfill(6)
-    
-    
+
+
 def format_leading_part(chapter):
     return str(chapter).zfill(2)
 
@@ -58,10 +63,12 @@ def format_chapter_number(chapter):
         return '{}.{}'.format(int(chapter[1:-1]), chapter[-1])
     return str(int(chapter[1:-1]))
 
+
 def hashidx(id):
     hashids = Hashids(
         salt='TIND', alphabet='abcdefghijklmnopqrstuvwxyz1234567890', min_length=7)
     return hashids.encode(id)
+
 
 def resize_image(image, new_height):
 
@@ -77,6 +84,7 @@ def resize_image(image, new_height):
     resized_image = image.resize((new_width, new_height), Image.ANTIALIAS)
 
     return resized_image
+
 
 def watermark_with_transparency_io(io_img, watermark_image_path):
     base_image = Image.open(io_img).convert('RGBA')
@@ -96,26 +104,19 @@ def watermark_with_transparency_io(io_img, watermark_image_path):
     return img_byte_arr.getvalue()
 
 
-def image_s3_upload(s3, root_directory, image_url, manga_no, formatted_img_count, slug, season, bucket):
-    # s3 = s3_connect()
+def image_s3_upload(s3, s3_path, original_path, bucket):
     img = watermark_with_transparency_io(
-        BytesIO(requests.get(image_url).content), 'watermark/new_watermark.png')
-    # resized_image = resize_img(img)
-    img_name = '{}.webp'.format(formatted_img_count)
-    manga_ordinal = format_leading_chapter(int(float(manga_no)))
-    season_path = format_leading_part(int(season))
-    manga_part = format_leading_part(int(float(manga_no) % 1 * 10))
-    img_src = '{}/{}/{}/{}/{}/{}'.format(root_directory, slug.lower(),
-                                         season_path, manga_ordinal, manga_part, img_name)
-    logging.info(img_src)
-    s3.put_object(Bucket=bucket, Key=img_src, Body=img,
+        BytesIO(requests.get(original_path).content), 'watermark/new_watermark.png')
+    logging.info(s3_path)
+    s3.put_object(Bucket=bucket, Key=s3_path, Body=img,
                   ACL='public-read', ContentType='image/webp')
-    
+
+
 def manga_builder(manga_obj_dict):
     img = Image.open(BytesIO(requests.get(manga_obj_dict['thumb']).content))
     today = datetime.now()
     today_str = '{}/{}/{}'.format(str(today.year),
-                                    str(today.month), str(today.day))
+                                  str(today.month), str(today.day))
     thumb_path = 'images/manga/{}/{}.jpg'.format(
         today_str, manga_obj_dict['slug'].lower())
     thumb_save_path = f'/www-data/mangamonster.com/storage/app/public/{thumb_path}'
@@ -141,13 +142,14 @@ def manga_builder(manga_obj_dict):
         'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
         'slug_original': manga_obj_dict['slug']
     }
-    
+
     manga_dict['search_text'] = manga_dict.get('name', '') + manga_dict.get(
         'description', '') + manga_dict.get('author', '') + manga_dict.get('genre', '')
     manga_dict['search_field'] = manga_dict.get(
         'name', '') + manga_obj_dict['type'] + manga_dict.get('author', '') + manga_dict.get('genre', '')
-    
+
     return manga_dict
+
 
 def chapter_builder(manga_obj_dict, manga_id):
     chapters = manga_obj_dict['chapters']
@@ -160,7 +162,7 @@ def chapter_builder(manga_obj_dict, manga_id):
             "published": chapter['date'],
             "manga_id": manga_id,
             "ordinal": chapter['ordinal'],
-            'resource_status':chapter['resource_status'],
+            'resource_status': chapter['resource_status'],
             "season": chapter['season'],
             'status': 1,
             'total_view': 0,
@@ -170,7 +172,117 @@ def chapter_builder(manga_obj_dict, manga_id):
             'created_at': chapter['date'],
             'updated_at': chapter['date'],
         }
-        processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages':len(chapter['image_urls'])})
+        processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages': len(
+            chapter['image_urls']), 'image_urls': chapter['image_urls']})
     return processed_chapter_dict
 
-    
+
+def resource_builder(resource_obj_dict, chapter_id, bucket):
+
+    return {
+        "name": '{}'.format(format_leading_img_count(resource_obj_dict['index'])),
+        "slug": '{}'.format(format_leading_img_count(resource_obj_dict['index'])),
+        "original": resource_obj_dict['original'],
+        "thumb": resource_obj_dict['s3'].replace('/storage', ''),
+        "manga_chapter_id": chapter_id,
+        "ordinal": resource_obj_dict['index'],
+        'storage': bucket,
+        'status': 1,
+        'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+        'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+    }
+
+
+def push_manga_to_db(db, manga):
+    manga_dict = manga_builder(manga)
+    manga_obj = Manga(**manga_dict)
+    try:
+        db.add(manga_obj)
+        db.commit()
+        logging.info('NEW MANGA INSERTED')
+    except Exception as ex:
+        db.rollback()
+
+    query_new_manga = db.query(Manga).where(
+        Manga.slug == manga_dict['slug'])
+    new_manga = query_new_manga.first()
+    if new_manga is not None:
+        idx = hashidx(new_manga.id)
+        update_value = {
+            'idx': idx,
+            'local_url': 'https://mangamonster.net/' + manga['slug'].lower() + '-m' + idx
+        }
+        query_new_manga.update(update_value)
+        db.commit()
+
+
+def push_chapter_to_db(db, manga_dict, chapter_dict):
+    pass
+
+
+def process_push_to_db(mode='manga', insert=True):
+    # Connect DB
+    db = Connection().mysql_connect()
+    s3 = Connection().s3_connect()
+    mongo_client = Connection().mongo_connect()
+    mongo_db = mongo_client['mangamonster']
+    tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
+    tx_mangas = mongo_db['tx_mangas']
+    list_mangas = tx_mangas.find(
+        {"source_site": MangaSourceEnum.MANGASEE.value})
+    for manga in list_mangas:
+        # Check if manga in DB:
+        existed_manga_query = db.query(Manga).where(
+            Manga.slug == manga['slug'].lower()).where(Manga.status == 1)
+        if mode == 'manga':
+            logging.info('INSERT MANGA')
+            if existed_manga_query.first() is None:
+                push_manga_to_db(db, manga)
+        if mode == 'chapter':
+            logging.info('INSERT CHAPTER MODE')
+            existed_manga = existed_manga_query.first()
+            bucket = tx_manga_bucket_mapping.find_one(
+                {"slug": existed_manga.slug})['bucket']
+            if existed_manga is not None:
+                db_manga_chapter = db.query(MangaChapters).where(MangaChapters.manga_id == existed_manga.id).where(
+                    MangaChapters.ordinal == manga.ordinal).where(MangaChapters.season == manga.season).where(MangaChapters.status == 1).first()
+                if db_manga_chapter is None:
+                    processed_chapter_dict = chapter_builder(
+                        manga, existed_manga.id)
+                    # Insert to database
+                    for item in processed_chapter_dict:
+                        chapter_dict = item['chapter_dict']
+                        manga_chapter_obj = MangaChapters(**chapter_dict)
+
+                        chapter_query = db.query(MangaChapters).filter(MangaChapters.manga_id == existed_manga.id,
+                                                                       MangaChapters.slug == manga_chapter_obj.slug, MangaChapters.season == manga_chapter_obj.season)
+                        
+                        chapter_count = chapter_query.count()
+                        if chapter_count == 0:
+                            try:
+                                db.add(manga_chapter_obj)
+                                db.commit()
+                            except Exception as ex:
+                                db.rollback()
+                        else:
+                            logging.info('CHAPTER EXISTS')
+                        if insert:
+                            logging.info('INSERT MODE')
+                            db_chapter_obj = chapter_query.first()
+                            resource_count = db.query(MangaChapterResources).filter(
+                                MangaChapterResources.manga_chapter_id == db_chapter_obj.id).count()
+                            if resource_count == item['pages']:
+                                image_urls = item['image_urls']
+                                logging.info('Adding resources...')
+                                for image in image_urls:
+                                    image_dict = resource_builder(
+                                        image, db_chapter_obj.id, bucket)
+                                    try:
+                                        db.add(image_dict)
+                                        db.commit()
+                                    except Exception as ex:
+                                        db.rollback()
+                                    logging.info('Saving to s3...')
+                                    image_s3_upload(
+                                        s3=s3, s3_path=image['s3'], original_path=image['original'])
+    db.close()
