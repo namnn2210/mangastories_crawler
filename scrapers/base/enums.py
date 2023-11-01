@@ -29,4 +29,5 @@ class MangaSourceEnum(Enum):
     
 class ErrorCategoryEnum(Enum):
     S3_UPLOAD = auto()
+    MANGA_PROCESSING = auto()
     

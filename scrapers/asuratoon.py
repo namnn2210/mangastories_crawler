@@ -127,6 +127,7 @@ class AsuratoonCrawler(Crawler):
         a_tags = list_genres.find_all('a')
         list_processed_genres = [tag.text for tag in a_tags]
         return list_processed_detail, list_processed_genres
+    
         
     def process_list_chapters(self, list_chapters,manga_slug):
         list_chapters_info = []
@@ -146,7 +147,7 @@ class AsuratoonCrawler(Crawler):
                 s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
                                                     season_path, manga_ordinal, manga_part, img_name)
                 list_image_urls.append({
-                    'index':i,
+                    'index':index,
                     'original':original_url,
                     's3':s3_url
                 })

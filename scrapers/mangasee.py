@@ -10,9 +10,10 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import MangaMonsterBucketEnum, ErrorCategoryEnum, MangaSourceEnum
 from configs.config import MAX_THREADS, S3_ROOT_DIRECTORY, INSERT_QUEUE
-from utils.crawler_util import get_soup, format_chapter_number, format_leading_chapter, image_s3_upload, format_leading_img_count, format_leading_part, process_push_to_db
+from utils.crawler_util import get_soup, format_chapter_number, format_leading_chapter, image_s3_upload, format_leading_img_count, format_leading_part, chapter_builder, process_push_to_db, push_chapter_to_db
 from models.entities import Manga, MangaChapters, MangaChapterResources
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -44,9 +45,10 @@ class MangaseeCrawler(Crawler):
             # Submit each manga for processing to the executor
             for manga in list_manga_request:
                 manga_slug = manga['i']
+                manga_ss = manga['ss']
                 manga_url = f'https://mangasee123.com/manga/{manga_slug}'
                 future = executor.submit(
-                    self.get_manga_info, manga_url, manga_slug, mongo_collection)
+                    self.get_manga_info, manga_url, manga_slug,manga_ss, mongo_collection)
                 futures.append(future)
 
             # Wait for all tasks to complete and get the results
@@ -61,8 +63,6 @@ class MangaseeCrawler(Crawler):
         mongo_db = mongo_client['mangamonster']
         tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
         tx_manga_errors = mongo_db['tx_manga_errors']
-        s3 = Connection().s3_connect()
-        insert_queue = Connection().redis_connect(db=2, queue_name=INSERT_QUEUE)
 
         manga_url = 'https://mangasee123.com/'
         soup = get_soup(manga_url, header=header)
@@ -106,6 +106,9 @@ class MangaseeCrawler(Crawler):
                         {'url': item['IndexName']})['bucket']
                     chapter_info_dict = self.extract_chapter_info(
                         chapter_source, chapter_info, chapter_url)
+                    chapter_dict = chapter_builder(chapter_info_dict, db_manga.id)
+                    processed_chapter_dict = {'chapter_dict': chapter_dict, 'pages': len(chapter_info_dict['image_urls']), 'image_urls': chapter_info_dict['image_urls']}
+                    push_chapter_to_db(db, processed_chapter_dict, manga_bucket, db_manga.id,True, tx_manga_errors)
                 else:
                     logging.info('New chapter %s for manga %s existed' %
                                  (item['Chapter'], item['IndexName']))
@@ -118,6 +121,7 @@ class MangaseeCrawler(Crawler):
         mongo_db = mongo_client['mangamonster']
         tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
         tx_mangas = mongo_db['tx_mangas']
+        tx_manga_errors = mongo_db['tx_manga_errors']
 
         manga_url = 'https://mangasee123.com/'
         soup = get_soup(manga_url, header=header)
@@ -137,7 +141,7 @@ class MangaseeCrawler(Crawler):
                 manga_url = 'https://mangasee123.com/manga/{}'.format(
                     manga_json['IndexName'])
                 self.get_manga_info(
-                    manga_url=manga_url, manga_slug=manga_json['IndexName'], mongo_collection=tx_mangas)
+                    manga_url=manga_url, manga_slug=manga_json['IndexName'], mongo_collection=tx_mangas, error=tx_manga_errors)
 
                 list_buckets = [item.value for item in MangaMonsterBucketEnum]
                 selected_bucket = random.choice(list_buckets)
@@ -183,7 +187,7 @@ class MangaseeCrawler(Crawler):
                     manga_raw_info_dict[field] = value
         return manga_raw_info_dict
 
-    def get_manga_info(self, manga_url, manga_slug, mongo_collection):
+    def get_manga_info(self, manga_url, manga_slug, manga_ss, mongo_collection,error):
         try:
             logging.info(manga_url)
             manga_soup = get_soup(manga_url, header=header)
@@ -219,10 +223,11 @@ class MangaseeCrawler(Crawler):
             final_dict = {
                 'name': manga_name,
                 'original': manga_url,
-                'slug': manga_slug,
+                'original_id': manga_slug,
                 'thumb': manga_thumb,
                 'count_chapters': manga_count_chapters,
                 'chapters': list_chapters_info,
+                'manga_status':manga_ss,
                 'source_site': MangaSourceEnum.MANGASEE.value
             }
 
@@ -237,7 +242,7 @@ class MangaseeCrawler(Crawler):
             # mongo_collection.insert_one(final_dict)
             logging.info('%s INSERTED TO DB' % manga_url)
         except Exception as ex:
-            logging.error(str(ex))
+            error.insert_one({'type':ErrorCategoryEnum.S3_UPLOAD,'date':datetime.now(),'description':str(ex),'data': image['s3'] + '=>' + image['original']})
 
     def extract_chapter_info(self, chapter_source, chapter_info, chapter_url, manga_slug):
         formatted_chapter_number = format_leading_chapter(
@@ -275,11 +280,13 @@ class MangaseeCrawler(Crawler):
             })
         chapter_info_dict = {
             'ordinal': float(format_chapter_number(chapter_info['Chapter'])),
+            
             'slug': manga_slug.lower() + directory_slug.lower() + '-chapter-' + format_chapter_number(chapter_info['Chapter']).replace('.', '-'),
             'original': chapter_url,
             'resource_status': 'ORIGINAL',
             'season': season,
             'image_urls': list_image_urls,
+            'pages': len(list_image_urls),
             'date': chapter_info['Date']
         }
         return chapter_info_dict
