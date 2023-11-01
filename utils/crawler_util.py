@@ -111,7 +111,11 @@ def image_s3_upload(s3, s3_path, original_path, bucket):
     logging.info(s3_path)
     s3.put_object(Bucket=bucket, Key=s3_path, Body=img,
                   ACL='public-read', ContentType='image/webp')
-
+    
+def process_chapter_ordinal(chapter_ordinal):
+    chapter_number = format_leading_chapter(int(float(chapter_ordinal)))
+    chapter_part = format_leading_part(int(float(chapter_ordinal % 1 * 10)))
+    return chapter_number, chapter_part
 
 def manga_builder(manga_obj_dict):
     img = Image.open(BytesIO(requests.get(manga_obj_dict['thumb']).content))

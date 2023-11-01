@@ -6,7 +6,7 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
 from models.entities import Manga
-from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part
+from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, format_chapter_number, format_leading_chapter
 from configs.config import MAX_THREADS
 from datetime import datetime
 import pytz
@@ -84,7 +84,10 @@ class AsuratoonCrawler(Crawler):
         list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
         manga_count_chapters = len(list_chapters)
         
-        list_chapters_info = self.process_list_chapters(list_chapters=list_chapters, manga_slug=manga_slug)
+        list_chapters_info = []
+        for chapter in list_chapters:
+            chapter_info_dict = self.extract_chapter_info(chapter=chapter, manga_slug=manga_slug)
+            list_chapters_info.append(chapter_info_dict)
         final_dict = {
             'name':manga_name,
             'original':manga_url,
@@ -93,7 +96,7 @@ class AsuratoonCrawler(Crawler):
             'count_chapters': manga_count_chapters, 
             'chapters': list_chapters_info,
             'official_translation':'',
-            'rss':'RSS Feed',
+            'rss':'',
             'type':manga_type,
             'alternative_name':'',
             'source_site':MangaSourceEnum.ASURATOON.value
@@ -129,41 +132,49 @@ class AsuratoonCrawler(Crawler):
         return list_processed_detail, list_processed_genres
     
         
-    def process_list_chapters(self, list_chapters,manga_slug):
-        list_chapters_info = []
-        for chapter in list_chapters:
-            chapter_num = chapter['data-num']
-            chapter_url = chapter.find('div',{'class':'eph-num'}).find('a')['href']
-            chapter_soup = get_soup(chapter_url,headers)
-            reader_area = chapter_soup.find('div',{'id':'readerarea'})
-            list_images = reader_area.find_all('img',{'decoding':'async'})
-            list_image_urls = []
-            for index, image in enumerate(list_images):
-                original_url = image['src']
-                img_name = '{}.webp'.format(format_leading_img_count(index+1))
-                manga_ordinal = format_leading_chapter(int(float(format_chapter_number(chapter_info['Chapter']))))
-                season_path = format_leading_part(0)
-                manga_part = format_leading_part(int(float(format_chapter_number(chapter_info['Chapter'])) % 1 * 10))
-                s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
-                                                    season_path, manga_ordinal, manga_part, img_name)
-                list_image_urls.append({
-                    'index':index,
-                    'original':original_url,
-                    's3':s3_url
-                })
-                list_image_urls.append({'img_count':index, 'img_url':image['src']})
-            chapter_number = chapter_url.split('chapter-')[1].replace('\\','').replace('-','.')
-            chapter_info_dict = {
-                'ordinal':chapter_number,
-                'slug':manga_slug + '-chapter-',
-                'original':chapter_url,
-                'resource_status': 'STORAGE',
-                'season':0,
-                'image_urls':list_image_urls,
-                'date':datetime.now(tz=pytz.timezone('America/Chicago'))
-            }
-            list_chapters_info.append(chapter_info_dict)
-        return list_chapters_info
+    def extract_chapter_info(self, chapter,manga_slug):
+        chapter_url = chapter.find('div',{'class':'eph-num'}).find('a')['href']
+        chapter_soup = get_soup(chapter_url,headers)
+        reader_area = chapter_soup.find('div',{'id':'readerarea'})
+        list_images = reader_area.find_all('img',{'decoding':'async'})
+        list_image_urls = []
+        chapter_ordinal = self.process_chapter_number(chapter_url)
+        chapter_number = format_leading_chapter(int(float(chapter_ordinal)))
+        season_path = format_leading_part(0)
+        chapter_part = format_leading_part(int(float(chapter_ordinal) % 1 * 10))
+        for index, image in enumerate(list_images):
+            original_url = image['src']
+            img_name = '{}.webp'.format(format_leading_img_count(index+1))
+            s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
+                                                season_path, chapter_number, chapter_part, img_name)
+            list_image_urls.append({
+                'index':index,
+                'original':original_url,
+                's3':s3_url
+            })
+            list_image_urls.append({'img_count':index, 'img_url':image['src']})
+        chapter_info_dict = {
+            'ordinal':chapter_ordinal,
+            'chapter_number':chapter_number,
+            'chapter_part':chapter_part,
+            'slug':manga_slug + '-chapter-',
+            'original':chapter_url,
+            'resource_status': 'ORIGINAL',
+            'season':0,
+            'image_urls':list_image_urls,
+            'date':datetime.now(tz=pytz.timezone('America/Chicago'))
+        }
+        return chapter_info_dict
+    
+    def process_chapter_number(self, chapter_url):
+        parts = chapter_url.split('-chapter-')[1].split('-')
+        list_concat = []
+        for part in parts:
+            text = part.strip('/')
+            if part.strip('/').isdigit():
+                list_concat.append(text)
+        chapter_number = '.'.join(list_concat)  # Extract numbers from the first part
+        return chapter_number
     
     def update_chapter(self):
         return super().update_chapter()

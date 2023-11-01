@@ -10,7 +10,7 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import MangaMonsterBucketEnum, ErrorCategoryEnum, MangaSourceEnum
 from configs.config import MAX_THREADS, S3_ROOT_DIRECTORY, INSERT_QUEUE
-from utils.crawler_util import get_soup, format_chapter_number, format_leading_chapter, image_s3_upload, format_leading_img_count, format_leading_part, chapter_builder, process_push_to_db, push_chapter_to_db
+from utils.crawler_util import get_soup, format_chapter_number, format_leading_chapter, image_s3_upload, format_leading_img_count, format_leading_part, chapter_builder, process_chapter_ordinal, process_push_to_db, push_chapter_to_db
 from models.entities import Manga, MangaChapters, MangaChapterResources
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -261,26 +261,27 @@ class MangaseeCrawler(Crawler):
             directory_slug = ''
         # Generate resources:
         list_image_urls = []
+        chapter_ordinal = format_chapter_number(chapter_info['Chapter'])
+        chapter_number, chapter_part = process_chapter_ordinal()
+        chapter_number = format_leading_chapter(int(float(format_chapter_number(chapter_info['Chapter']))))
+        chapter_season = format_leading_part(int(season))
+        chapter_part = format_leading_part(int(float(format_chapter_number(chapter_info['Chapter'])) % 1 * 10))
         for i in range(1, int(chapter_info['Page']) + 1):
             original_url = self.get_image_url(chapter_source=chapter_source, slug=manga_slug, directory=directory,
                                               formatted_chapter_number=formatted_chapter_number, formatted_img_count=format_leading_img_count(i))
             img_name = '{}.webp'.format(
                 format_leading_img_count(i))
-            manga_ordinal = format_leading_chapter(
-                int(float(format_chapter_number(chapter_info['Chapter']))))
-            season_path = format_leading_part(int(season))
-            manga_part = format_leading_part(
-                int(float(format_chapter_number(chapter_info['Chapter'])) % 1 * 10))
             s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
-                                                season_path, manga_ordinal, manga_part, img_name)
+                                                chapter_season, chapter_number, chapter_part, img_name)
             list_image_urls.append({
                 'index': i,
                 'original': original_url,
                 's3': s3_url
             })
         chapter_info_dict = {
-            'ordinal': float(format_chapter_number(chapter_info['Chapter'])),
-            
+            'ordinal':chapter_ordinal,
+            'chapter_number':chapter_number,
+            'chapter_part':chapter_part,
             'slug': manga_slug.lower() + directory_slug.lower() + '-chapter-' + format_chapter_number(chapter_info['Chapter']).replace('.', '-'),
             'original': chapter_url,
             'resource_status': 'ORIGINAL',
