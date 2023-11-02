@@ -114,7 +114,7 @@ def image_s3_upload(s3, s3_path, original_path, bucket):
     
 def process_chapter_ordinal(chapter_ordinal):
     chapter_number = format_leading_chapter(int(float(chapter_ordinal)))
-    chapter_part = format_leading_part(int(float(chapter_ordinal % 1 * 10)))
+    chapter_part = format_leading_part(int(float(chapter_ordinal) % 1 * 10))
     return chapter_number, chapter_part
 
 def manga_builder(manga_obj_dict):
