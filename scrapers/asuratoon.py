@@ -75,7 +75,6 @@ class AsuratoonCrawler(Crawler):
         manga_soup = get_soup(manga_url,headers)
         manga_slug = '-'.join(manga_url.split('/')[-2].split('-')[1:])
         
-        logging.info(manga_slug)
         # manga_name = manga_soup.find('h1',{'class':'entry-title'}).text
         # manga_thumb = manga_soup.find('div',{'class':'thumb'}).find('img')['src']
         # manga_type = manga_soup.find('span',{'class':'type'}).text
@@ -85,12 +84,12 @@ class AsuratoonCrawler(Crawler):
         
         # list_processed_detail, list_processed_genres = self.process_detail(list_details,list_genres)
  
-        # list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
+        list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
         # manga_count_chapters = len(list_chapters)
         
         # list_chapters_info = []
-        # for chapter in list_chapters:
-        #     chapter_info_dict = self.extract_chapter_info(chapter=chapter, manga_slug=manga_slug)
+        for chapter in list_chapters:
+            chapter_info_dict = self.extract_chapter_info(chapter=chapter, manga_slug=manga_slug)
         #     list_chapters_info.append(chapter_info_dict)
         # final_dict = {
         #     'name':manga_name,
