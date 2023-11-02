@@ -34,6 +34,8 @@ class AsuratoonCrawler(Crawler):
         # Crawl multiple pages
         list_manga_urls = self.get_all_manga_urls()
         
+        logging.info('Total mangas: %s' % len(list_manga_urls))
+        
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection) for manga_url in list_manga_urls]
             
@@ -72,46 +74,48 @@ class AsuratoonCrawler(Crawler):
         logging.info(manga_url)
         manga_soup = get_soup(manga_url,headers)
         manga_slug = '-'.join(manga_url.split('/')[-2].split('-')[1:])
-        manga_name = manga_soup.find('h1',{'class':'entry-title'}).text
-        manga_thumb = manga_soup.find('div',{'class':'thumb'}).find('img')['src']
-        manga_type = manga_soup.find('span',{'class':'type'}).text
-        info_box = manga_soup.find('div',{'class':'infox'})
-        list_details = info_box.find_all('div',{'class':'flex-wrap'})
-        list_genres = info_box.find_all('div',{'class':'wd-full'})[1]
         
-        list_processed_detail, list_processed_genres = self.process_detail(list_details,list_genres)
+        logging.info(manga_slug)
+        # manga_name = manga_soup.find('h1',{'class':'entry-title'}).text
+        # manga_thumb = manga_soup.find('div',{'class':'thumb'}).find('img')['src']
+        # manga_type = manga_soup.find('span',{'class':'type'}).text
+        # info_box = manga_soup.find('div',{'class':'infox'})
+        # list_details = info_box.find_all('div',{'class':'flex-wrap'})
+        # list_genres = info_box.find_all('div',{'class':'wd-full'})[1]
+        
+        # list_processed_detail, list_processed_genres = self.process_detail(list_details,list_genres)
  
-        list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
-        manga_count_chapters = len(list_chapters)
+        # list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
+        # manga_count_chapters = len(list_chapters)
         
-        list_chapters_info = []
-        for chapter in list_chapters:
-            chapter_info_dict = self.extract_chapter_info(chapter=chapter, manga_slug=manga_slug)
-            list_chapters_info.append(chapter_info_dict)
-        final_dict = {
-            'name':manga_name,
-            'original':manga_url,
-            'original_id': manga_slug,
-            'thumb':manga_thumb,
-            'count_chapters': manga_count_chapters, 
-            'chapters': list_chapters_info,
-            'official_translation':'',
-            'rss':'',
-            'type':manga_type,
-            'alternative_name':'',
-            'source_site':MangaSourceEnum.ASURATOON.value
-        }
-        final_dict['description'] = manga_soup.find('div',{'itemprop':'description'}).find('p').text + ' (Source: Mangamonster.net)'
-        final_dict['genre'] = ','.join(list_processed_genres)
-        for detail_dict in list_processed_detail:
-            key, value = next(iter(detail_dict.items()))
-            if key == 'author' and value == '-':
-                final_dict[key] = '' 
-            else:
-                final_dict[key] = value 
-        # Insert or Update 
-        filter_criteria = {"original_id": final_dict["original_id"]}
-        mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
+        # list_chapters_info = []
+        # for chapter in list_chapters:
+        #     chapter_info_dict = self.extract_chapter_info(chapter=chapter, manga_slug=manga_slug)
+        #     list_chapters_info.append(chapter_info_dict)
+        # final_dict = {
+        #     'name':manga_name,
+        #     'original':manga_url,
+        #     'original_id': manga_slug,
+        #     'thumb':manga_thumb,
+        #     'count_chapters': manga_count_chapters, 
+        #     'chapters': list_chapters_info,
+        #     'official_translation':'',
+        #     'rss':'',
+        #     'type':manga_type,
+        #     'alternative_name':'',
+        #     'source_site':MangaSourceEnum.ASURATOON.value
+        # }
+        # final_dict['description'] = manga_soup.find('div',{'itemprop':'description'}).find('p').text + ' (Source: Mangamonster.net)'
+        # final_dict['genre'] = ','.join(list_processed_genres)
+        # for detail_dict in list_processed_detail:
+        #     key, value = next(iter(detail_dict.items()))
+        #     if key == 'author' and value == '-':
+        #         final_dict[key] = '' 
+        #     else:
+        #         final_dict[key] = value 
+        # # Insert or Update 
+        # filter_criteria = {"original_id": final_dict["original_id"]}
+        # mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
             
         
     def process_detail(self, list_details, list_genres):
@@ -149,11 +153,11 @@ class AsuratoonCrawler(Crawler):
             s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
                                                 season_path, chapter_number, chapter_part, img_name)
             list_image_urls.append({
-                'index':index,
+                'index':index+1,
                 'original':original_url,
                 's3':s3_url
             })
-            list_image_urls.append({'img_count':index, 'img_url':image['src']})
+
         chapter_info_dict = {
             'ordinal':chapter_ordinal,
             'chapter_number':chapter_number,
