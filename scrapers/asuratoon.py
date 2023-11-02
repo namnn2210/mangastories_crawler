@@ -172,6 +172,7 @@ class AsuratoonCrawler(Crawler):
         return chapter_info_dict
     
     def process_chapter_number(self, chapter_url):
+        logging.info(chapter_url.split('-chapter-'))
         parts = chapter_url.split('-chapter-')[1].split('-')
         list_concat = []
         for part in parts:
