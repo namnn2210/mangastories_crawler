@@ -86,8 +86,11 @@ class AsuratoonCrawler(Crawler):
             manga_type = manga_type_div.text
         info_box = manga_soup.find('div',{'class':'infox'})
         list_details = info_box.find_all('div',{'class':'flex-wrap'})
-        list_genres = info_box.find_all('div',{'class':'wd-full'})[1]
-        
+        list_genres_div = info_box.find_all('div',{'class':'wd-full'})[1]
+        if len(list_genres_div) > 1:
+            list_genres = list_genres_div[1]
+        else:
+            list_genres = None
         list_processed_detail, list_processed_genres = self.process_detail(list_details,list_genres)
  
         list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
@@ -139,8 +142,11 @@ class AsuratoonCrawler(Crawler):
                 elif b_tag == 'Author':
                     value = info.find('span').text
                     list_processed_detail.append({'author':value.replace('\r','').replace('\t','').replace('\n','')})
-        a_tags = list_genres.find_all('a')
-        list_processed_genres = [tag.text for tag in a_tags]
+        if list_genres is not None:
+            a_tags = list_genres.find_all('a')
+            list_processed_genres = [tag.text for tag in a_tags]
+        else:
+            list_processed_genres = []
         return list_processed_detail, list_processed_genres
     
         
