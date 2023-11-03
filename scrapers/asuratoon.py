@@ -79,9 +79,11 @@ class AsuratoonCrawler(Crawler):
         
         manga_name = manga_soup.find('h1',{'class':'entry-title'}).text
         manga_thumb = manga_soup.find('div',{'class':'thumb'}).find('img')['src']
-        manga_type = manga_soup.find('span',{'class':'type'}).text
-        if manga_type is None:
+        manga_type_div = manga_soup.find('span',{'class':'type'})
+        if manga_type_div is None:
             manga_type = ''
+        else:
+            manga_type = manga_type_div.text
         info_box = manga_soup.find('div',{'class':'infox'})
         list_details = info_box.find_all('div',{'class':'flex-wrap'})
         list_genres = info_box.find_all('div',{'class':'wd-full'})[1]
