@@ -86,7 +86,7 @@ class AsuratoonCrawler(Crawler):
             manga_type = manga_type_div.text
         info_box = manga_soup.find('div',{'class':'infox'})
         list_details = info_box.find_all('div',{'class':'flex-wrap'})
-        list_genres_div = info_box.find_all('div',{'class':'wd-full'})[1]
+        list_genres_div = info_box.find_all('div',{'class':'wd-full'})
         if len(list_genres_div) > 1:
             list_genres = list_genres_div[1]
         else:
