@@ -119,7 +119,11 @@ class ManhuaplusCrawler(Crawler):
         reader_area = chapter_soup.find('div',{'class':'reading-content'})
         list_images = reader_area.find_all('div',{'class':'page-break'})
         if len(list_images) == 0:
-            list_images = reader_area.find('div',{'class':'text-left'}).find('p').find_all('img')
+            img_div = reader_area.find('div',{'class':'text-left'})
+            if img_div.find('p') is not None:
+                list_images = img_div.find('p').find_all('img')
+            if img_div.find('div',{'ul':'blocks-gallery-grid'}) is not None:
+                list_images = img_div.find('div',{'ul':'blocks-gallery-grid'}).find_all('img')
         list_image_urls = []
         # str_chapter_num = chapter.find('span',{'class':'chapternum'}).text
         chapter_ordinal = self.process_chapter_number(str_chapter_num)
@@ -176,7 +180,6 @@ class ManhuaplusCrawler(Crawler):
         else:
             return None
     
-    
         
     def push_to_db(self, mode='manga', insert=True):
         return super().push_to_db(mode, insert)
@@ -185,4 +188,20 @@ class ManhuaplusCrawler(Crawler):
         return super().update_chapter()
     
     def update_manga(self):
-        return super().update_manga()
+        list_manga_urls = self.get_all_manga_urls()
+        db = Connection().mysql_connect()
+        mongo_client = Connection().mongo_connect()
+        mongo_db = mongo_client['mangamonster']
+        mongo_collection = mongo_db['tx_mangas']
+        list_manga_update = []
+        for manga_url in list_manga_urls:
+            manga_slug = '-'.join(manga_url.split('/')[-2])
+            manga_query = db.query(Manga).where(Manga.slug == manga_slug)
+            if manga_query.first() is None:
+                list_manga_update.append(manga_url)
+                
+        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection) for manga_url in list_manga_urls]
+            
+        for future in futures:
+            future.result()
