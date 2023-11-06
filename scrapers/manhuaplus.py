@@ -69,6 +69,7 @@ class ManhuaplusCrawler(Crawler):
     def extract_manga_info(self,manga_url, mongo_collection):
         logging.info(manga_url)
         manga_soup = get_soup(manga_url,headers)
+        logging.info(manga_soup)
         manga_slug = '-'.join(manga_url.split('/')[-2])
         manga_name = manga_soup.find('meta',{'property':'og-title'})
         if manga_name is None:
