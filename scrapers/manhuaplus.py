@@ -146,7 +146,7 @@ class ManhuaplusCrawler(Crawler):
         }
         return chapter_info_dict
     
-    def process_detail(list_details):
+    def process_detail(self, list_details):
         list_processed_detail = []
         for detail in list_details:
             detail_name = detail.find('div',{'class':'summary-heading'}).text
