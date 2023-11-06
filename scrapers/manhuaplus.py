@@ -70,7 +70,9 @@ class ManhuaplusCrawler(Crawler):
         logging.info(manga_url)
         manga_soup = get_soup(manga_url,headers)
         manga_slug = '-'.join(manga_url.split('/')[-2])
-        manga_name = manga_soup.find('meta',{'property':'og-title'})['content']
+        manga_name = manga_soup.find('meta',{'property':'og-title'})
+        if manga_name is None:
+            manga_name = manga_soup.find('h5',{'class':'widget-title'}).find('a')['title']
         manga_thumb = manga_soup.find('meta',{'property':'og-thumb'})['content']
         # manga_type = 'Manhua'
         description = manga_soup.find('meta',{'property':'og-thumb'})
