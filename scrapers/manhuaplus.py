@@ -84,7 +84,8 @@ class ManhuaplusCrawler(Crawler):
         
         list_chapters_info = []
         for chapter in list_chapters:
-            chapter_info_dict = self.extract_chapter_info(chapter=chapter, manga_slug=manga_slug)
+            str_chapter_num = chapter.find('a').text
+            chapter_info_dict = self.extract_chapter_info(chapter=chapter, str_chapter_num=str_chapter_num, manga_slug=manga_slug)
             list_chapters_info.append(chapter_info_dict)
         
         final_dict = {
@@ -111,14 +112,15 @@ class ManhuaplusCrawler(Crawler):
         filter_criteria = {"original_id": final_dict["original_id"]}
         mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
         
-    def extract_chapter_info(self, chapter,manga_slug):
+    def extract_chapter_info(self, chapter, str_chapter_num,manga_slug):
         chapter_url = chapter.find('a')['href']
         chapter_slug = chapter_url.split('/')[-3] + chapter_url.split('/')[-2]
         chapter_soup = get_soup(chapter_url,headers)
         reader_area = chapter_soup.find('div',{'class':'reading-content'})
         list_images = reader_area.find_all('div',{'class':'page-break'})
         list_image_urls = []
-        chapter_ordinal = self.process_chapter_number(chapter_url)
+        # str_chapter_num = chapter.find('span',{'class':'chapternum'}).text
+        chapter_ordinal = self.process_chapter_number(str_chapter_num)
         chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
         season_path = format_leading_part(0)
         for index, image in enumerate(list_images):
@@ -166,14 +168,12 @@ class ManhuaplusCrawler(Crawler):
         return list_processed_detail
     
     def process_chapter_number(self, chapter_url):
-        parts = chapter_url.split('-chapter-')[1].split('-')
-        list_concat = []
-        for part in parts:
-            text = part.strip('/')
-            if part.strip('/').isdigit():
-                list_concat.append(text)
-        chapter_number = '.'.join(list_concat)  # Extract numbers from the first part
-        return chapter_number
+        regex = r'Chapter (\d+(\.\d+)?)'
+        chapter_num_match = re.search(regex, str_chapter_num)
+        if chapter_num_match:
+            return chapter_num_match.group(1)
+        else:
+            return None
     
     
         
