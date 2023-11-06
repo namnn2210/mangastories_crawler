@@ -6,7 +6,7 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
 from models.entities import Manga
-from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, format_chapter_number, format_leading_chapter
+from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, process_chapter_ordinal
 from configs.config import MAX_THREADS
 from datetime import datetime
 import pytz
@@ -72,8 +72,10 @@ class ManhuaplusCrawler(Crawler):
         manga_slug = '-'.join(manga_url.split('/')[-2])
         manga_name = manga_soup.find('meta',{'property':'og-title'}).text
         manga_thumb = manga_soup.find('meta',{'property':'og-thumb'}).text
-        manga_type = 'Manhua'
-        manga_description = manga_soup.find('meta',{'property':'og-thumb'}).text
+        # manga_type = 'Manhua'
+        description = manga_soup.find('meta',{'property':'og-thumb'})
+        list_details = manga_soup.find('div',{'class':'post-content_item'})
+        list_processed_detail = self.process_detail(list_details)
         
         list_chapters = manga_soup.find('ul',{'class':'version-chap'}).find_all('li')
         manga_count_chapters = len(list_chapters)
@@ -86,16 +88,26 @@ class ManhuaplusCrawler(Crawler):
         final_dict = {
             'name':manga_name,
             'original':manga_url,
-            'slug': manga_slug,
+            'original_id': manga_slug,
             'thumb':manga_thumb,
             'count_chapters': manga_count_chapters, 
             'chapters': list_chapters_info,
             'official_translation':'',
             'rss':'',
-            'type':manga_type,
-            'alternative_name':'',
-            'source_site':MangaSourceEnum.ASURATOON.value
+            'source_site':MangaSourceEnum.MANHUAPLUS.value
         }
+        
+        if description:
+            final_dict['description'] = description.text + ' (Source: Mangamonster.net)'
+        else:
+            final_dict['description'] = ''
+            
+        for detail_dict in list_processed_detail:
+            key, value = next(iter(detail_dict.items()))
+            final_dict[key] = value 
+        # Insert or Update 
+        filter_criteria = {"original_id": final_dict["original_id"]}
+        mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
         
     def extract_chapter_info(self, chapter,manga_slug):
         chapter_url = chapter.find('a')['href']
@@ -105,9 +117,8 @@ class ManhuaplusCrawler(Crawler):
         list_images = reader_area.find_all('div',{'class':'page-break'})
         list_image_urls = []
         chapter_ordinal = self.process_chapter_number(chapter_url)
-        chapter_number = format_leading_chapter(int(float(chapter_ordinal)))
+        chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
         season_path = format_leading_part(0)
-        chapter_part = format_leading_part(int(float(chapter_ordinal) % 1 * 10))
         for index, image in enumerate(list_images):
             original_url = image['src']
             img_name = '{}.webp'.format(format_leading_img_count(index+1))
@@ -133,6 +144,25 @@ class ManhuaplusCrawler(Crawler):
         }
         return chapter_info_dict
     
+    def process_detail(list_details):
+        list_processed_detail = []
+        for detail in list_details:
+            detail_name = detail.find('div',{'class':'summary-heading'}).text
+            detail_value = detail.find('div',{'class':'summary-content'}).text
+            if detail_name.strip() == 'Alternative':
+                list_processed_detail.append({'alternative_name':detail_value})
+            elif detail_name.strip() == 'Author(s)':
+                list_processed_detail.append({'author':detail_value})
+            elif detail_name.strip() == 'Type':
+                list_processed_detail.append({'type':detail_value})
+            elif detail_name.strip() == 'Genre(s)':
+                list_processed_detail.append({'genre':detail_value.strip()})
+            elif detail_name.strip() == 'Release':
+                list_processed_detail.append({'published':detail_value})
+            elif detail_name.strip() == 'Status':
+                list_processed_detail.append({'status':detail_value})
+        return list_processed_detail
+    
     def process_chapter_number(self, chapter_url):
         parts = chapter_url.split('-chapter-')[1].split('-')
         list_concat = []
@@ -142,6 +172,8 @@ class ManhuaplusCrawler(Crawler):
                 list_concat.append(text)
         chapter_number = '.'.join(list_concat)  # Extract numbers from the first part
         return chapter_number
+    
+    
         
     def push_to_db(self, mode='manga', insert=True):
         return super().push_to_db(mode, insert)
