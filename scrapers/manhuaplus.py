@@ -76,7 +76,7 @@ class ManhuaplusCrawler(Crawler):
         manga_thumb = manga_soup.find('meta',{'property':'og:image'})['content']
         # manga_type = 'Manhua'
         description = manga_soup.find('meta',{'property':'og:description'})
-        list_details = manga_soup.find('div',{'class':'post-content_item'})
+        list_details = manga_soup.find_all('div',{'class':'post-content_item'})
         list_processed_detail = self.process_detail(list_details)
         
         list_chapters = manga_soup.find('ul',{'class':'version-chap'}).find_all('li')
