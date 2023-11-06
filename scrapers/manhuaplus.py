@@ -10,7 +10,7 @@ from utils.crawler_util import get_soup, format_leading_img_count,format_leading
 from configs.config import MAX_THREADS
 from datetime import datetime
 import pytz
-
+import re
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
@@ -167,7 +167,7 @@ class ManhuaplusCrawler(Crawler):
                 list_processed_detail.append({'status':detail_value})
         return list_processed_detail
     
-    def process_chapter_number(self, chapter_url):
+    def process_chapter_number(self, str_chapter_num):
         regex = r'Chapter (\d+(\.\d+)?)'
         chapter_num_match = re.search(regex, str_chapter_num)
         if chapter_num_match:
