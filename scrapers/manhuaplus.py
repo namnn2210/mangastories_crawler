@@ -120,10 +120,15 @@ class ManhuaplusCrawler(Crawler):
         list_images = reader_area.find_all('div',{'class':'page-break'})
         if len(list_images) == 0:
             img_div = reader_area.find('div',{'class':'text-left'})
-            if img_div.find('p') is not None:
-                list_images = img_div.find('p').find_all('img')
-            if img_div.find('div',{'ul':'blocks-gallery-grid'}) is not None:
-                list_images = img_div.find('div',{'ul':'blocks-gallery-grid'}).find_all('img')
+            if img_div is not None:
+                if img_div.find('p') is not None:
+                    list_images = img_div.find('p').find_all('img')
+                elif img_div.find('div',{'ul':'blocks-gallery-grid'}) is not None:
+                    list_images = img_div.find('div',{'ul':'blocks-gallery-grid'}).find_all('img')
+            else:
+                img_div = reader_area.find('div',{'class':'chapter-video-frame'})
+                if img_div.find('div',{'ul':'blocks-gallery-grid'}) is not None:
+                    list_images = img_div.find('div',{'ul':'blocks-gallery-grid'}).find_all('img')
         list_image_urls = []
         # str_chapter_num = chapter.find('span',{'class':'chapternum'}).text
         chapter_ordinal = self.process_chapter_number(str_chapter_num)
