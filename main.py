@@ -9,7 +9,6 @@ def create_and_run_crawler(factory):
     crawler.crawl()
 
 if __name__ == "__main__":
-    # asuratoon = AsuratoonCrawlerFactory().create_crawler().crawl()
-    mangasee = MangaseeCrawlerFactory().create_crawler().crawl()
+    asuratoon = AsuratoonCrawlerFactory().create_crawler().crawl()
+    # mangasee = MangaseeCrawlerFactory().create_crawler().crawl()
     # manhuaplus = ManhuaplusCrawlerFactory().create_crawler().crawl()
-    # print(crawler_util.process_chapter_ordinal('54.3'))
