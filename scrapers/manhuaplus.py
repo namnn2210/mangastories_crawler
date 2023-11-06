@@ -74,9 +74,9 @@ class ManhuaplusCrawler(Crawler):
         manga_name = manga_soup.find('meta',{'property':'og-title'})
         if manga_name is None:
             manga_name = manga_soup.find('h5',{'class':'widget-title'}).find('a')['title']
-        manga_thumb = manga_soup.find('meta',{'property':'og-thumb'})['content']
+        manga_thumb = manga_soup.find('meta',{'property':'og:image'})['content']
         # manga_type = 'Manhua'
-        description = manga_soup.find('meta',{'property':'og-thumb'})
+        description = manga_soup.find('meta',{'property':'og:description'})
         list_details = manga_soup.find('div',{'class':'post-content_item'})
         list_processed_detail = self.process_detail(list_details)
         
