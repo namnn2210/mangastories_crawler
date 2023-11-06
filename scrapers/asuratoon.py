@@ -116,7 +116,11 @@ class AsuratoonCrawler(Crawler):
             'alternative_name':'',
             'source_site':MangaSourceEnum.ASURATOON.value
         }
-        final_dict['description'] = manga_soup.find('div',{'itemprop':'description'}).find('p').text + ' (Source: Mangamonster.net)'
+        description = manga_soup.find('div',{'itemprop':'description'}).find('p')
+        if description is not None: 
+            final_dict['description'] = description.text + ' (Source: Mangamonster.net)'
+        else:
+            final_dict['description'] = ''
         final_dict['genre'] = ','.join(list_processed_genres)
         for detail_dict in list_processed_detail:
             key, value = next(iter(detail_dict.items()))
