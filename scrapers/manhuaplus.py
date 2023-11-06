@@ -70,8 +70,8 @@ class ManhuaplusCrawler(Crawler):
         logging.info(manga_url)
         manga_soup = get_soup(manga_url,headers)
         manga_slug = '-'.join(manga_url.split('/')[-2])
-        manga_name = manga_soup.find('meta',{'property':'og-title'}).text
-        manga_thumb = manga_soup.find('meta',{'property':'og-thumb'}).text
+        manga_name = manga_soup.find('meta',{'property':'og-title'})['content']
+        manga_thumb = manga_soup.find('meta',{'property':'og-thumb'})['content']
         # manga_type = 'Manhua'
         description = manga_soup.find('meta',{'property':'og-thumb'})
         list_details = manga_soup.find('div',{'class':'post-content_item'})
@@ -98,7 +98,7 @@ class ManhuaplusCrawler(Crawler):
         }
         
         if description:
-            final_dict['description'] = description.text + ' (Source: Mangamonster.net)'
+            final_dict['description'] = description['content'] + ' (Source: Mangamonster.net)'
         else:
             final_dict['description'] = ''
             
