@@ -1,7 +1,7 @@
 from scrapers.mangasee import MangaseeCrawlerFactory
 from scrapers.asuratoon import AsuratoonCrawlerFactory
 from scrapers.manhuaplus import ManhuaplusCrawlerFactory 
-
+from utils import crawler_util
 from sources.manga_sources import MangaSourceWriter
 
 def create_and_run_crawler(factory):
@@ -9,6 +9,7 @@ def create_and_run_crawler(factory):
     crawler.crawl()
 
 if __name__ == "__main__":
-    asuratoon = AsuratoonCrawlerFactory().create_crawler().crawl()
-    # mangasee = MangaseeCrawlerFactory().create_crawler().crawl()
+    # asuratoon = AsuratoonCrawlerFactory().create_crawler().crawl()
+    mangasee = MangaseeCrawlerFactory().create_crawler().crawl()
     # manhuaplus = ManhuaplusCrawlerFactory().create_crawler().crawl()
+    # print(crawler_util.process_chapter_ordinal('54.3'))

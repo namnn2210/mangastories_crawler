@@ -16,6 +16,7 @@ import requests
 import json
 import io
 import logging
+import math
 
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -113,8 +114,13 @@ def image_s3_upload(s3, s3_path, original_path, bucket):
                   ACL='public-read', ContentType='image/webp')
     
 def process_chapter_ordinal(chapter_ordinal):
-    chapter_number = format_leading_chapter(int(float(chapter_ordinal)))
-    chapter_part = format_leading_part(int(float(chapter_ordinal) % 1 * 10))
+    # chapter_number = format_leading_chapter(int(float(chapter_ordinal)))
+    # chapter_part = format_leading_part(int(float(chapter_ordinal) % 1 * 10))
+    frac, whole = math.modf(float(chapter_ordinal))
+    round_frac = round(frac, 2)
+    chapter_number = format_leading_chapter(int(whole))
+    chapter_part = format_leading_part(int(round_frac * 10))
+
     return chapter_number, chapter_part
 
 def manga_builder(manga_obj_dict):
@@ -292,3 +298,4 @@ def process_push_to_db(mode='manga'):
                     for processed_chapter_dict in list_processed_chapter_dict:
                         push_chapter_to_db(db, processed_chapter_dict,bucket,existed_manga.id, insert=True)
     db.close()
+    
