@@ -135,7 +135,6 @@ class ManhuaplusCrawler(Crawler):
                 'original':original_url,
                 's3':s3_url
             })
-            list_image_urls.append({'img_count':index, 'img_url':image['src']})
         chapter_info_dict = {
             'ordinal':chapter_ordinal,
             'chapter_number':chapter_number,
