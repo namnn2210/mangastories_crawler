@@ -119,7 +119,7 @@ class ManhuaplusCrawler(Crawler):
         reader_area = chapter_soup.find('div',{'class':'reading-content'})
         list_images = reader_area.find_all('div',{'class':'page-break'})
         if len(list_images) == 0:
-            list_images = reader_area.find_all('div',{'class':'text-left'}).find('p').find_all('img')
+            list_images = reader_area.find('div',{'class':'text-left'}).find('p').find_all('img')
         list_image_urls = []
         # str_chapter_num = chapter.find('span',{'class':'chapternum'}).text
         chapter_ordinal = self.process_chapter_number(str_chapter_num)
