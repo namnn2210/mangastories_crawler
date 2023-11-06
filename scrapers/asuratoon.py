@@ -8,7 +8,7 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
 from models.entities import Manga
-from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, format_chapter_number, format_leading_chapter
+from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, process_chapter_ordinal
 from configs.config import MAX_THREADS
 from datetime import datetime
 
@@ -165,12 +165,8 @@ class AsuratoonCrawler(Crawler):
         chapter_ordinal = self.process_chapter_number(str_chapter_num)
         if chapter_ordinal is None:
             chapter_ordinal = 0
-        chapter_number = format_leading_chapter(int(float(chapter_ordinal)))
+        chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
         season_path = format_leading_part(0)
-        if chapter_ordinal is None:
-            chapter_part = format_leading_part(non_chapter_number_count)
-        else:
-            chapter_part = format_leading_part(int(float(chapter_ordinal) % 1 * 10))
         for index, image in enumerate(list_images):
             original_url = image['src']
             img_name = '{}.webp'.format(format_leading_img_count(index+1))
