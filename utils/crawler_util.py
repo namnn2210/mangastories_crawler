@@ -268,7 +268,7 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
                     
 
 
-def process_push_to_db(mode='manga', source_site=MangaSourceEnum.MANGASEE.value, insert=True, count=2):
+def process_push_to_db(mode='manga', source_site=MangaSourceEnum.MANGASEE.value, insert=True, count=10):
     # Connect DB
     db = Connection().mysql_connect()
     mongo_client = Connection().mongo_connect()
