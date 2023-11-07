@@ -292,7 +292,7 @@ def process_push_to_db(mode='manga', source_site=MangaSourceEnum.MANGASEE.value,
             logging.info('Inserting manga chapters for manga: %s' % manga['original_id'])
             existed_manga = existed_manga_query.first()
             logging.info(existed_manga.slug)
-            bucket = tx_manga_bucket_mapping.find_one({'$or':[ {"original_id": existed_manga.slug}, {"original_id": existed_manga.slug.lower()}] })['bucket']
+            bucket = tx_manga_bucket_mapping.find_one({'$or':[ {"original_id": existed_manga.slug_original}, {"original_id": existed_manga.slug_original.lower()}] })['bucket']
             if existed_manga is not None:
                     chapters = manga['chapters']
                     list_processed_chapter_dict = []
