@@ -6,7 +6,7 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
 from models.entities import Manga
-from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, process_chapter_ordinal
+from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, process_chapter_ordinal, process_push_to_db
 from configs.config import MAX_THREADS
 from datetime import datetime
 import pytz
@@ -186,8 +186,8 @@ class ManhuaplusCrawler(Crawler):
             return None
     
         
-    def push_to_db(self, mode='manga', insert=True):
-        return super().push_to_db(mode, insert)
+    def push_to_db(self):
+        process_push_to_db(mode='all', source_site=MangaSourceEnum.MANHUAPLUS.value, insert=True)
     
     def update_chapter(self):
         return super().update_chapter()
