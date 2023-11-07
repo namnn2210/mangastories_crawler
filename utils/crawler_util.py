@@ -7,7 +7,7 @@ from hashids import Hashids
 from io import BytesIO
 from datetime import datetime
 from models.entities import Manga, MangaChapters, MangaChapterResources
-from scrapers.base.enums import MangaSourceEnum, ErrorCategoryEnum
+from scrapers.base.enums import MangaSourceEnum, ErrorCategoryEnum, MangaMonsterBucketEnum
 from connections.connection import Connection
 
 import pytz
@@ -17,6 +17,7 @@ import json
 import io
 import logging
 import math
+import random
 
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -129,29 +130,33 @@ def manga_builder(manga_obj_dict):
     today_str = '{}/{}/{}'.format(str(today.year),
                                   str(today.month), str(today.day))
     thumb_path = 'images/manga/{}/{}.jpg'.format(
-        today_str, manga_obj_dict['slug'].lower())
+        today_str, manga_obj_dict['original_id'].lower())
     thumb_save_path = f'/www-data/mangamonster.com/storage/app/public/{thumb_path}'
-    logging.info(thumb_save_path)
     os.makedirs(os.path.dirname(thumb_save_path), exist_ok=True)
     img.convert('RGB').save(thumb_save_path)
     if manga_obj_dict['type'] == 'Manga':
         manga_type = 1
     elif manga_obj_dict['type'] == 'Manhua':
         manga_type = 2
+    elif manga_obj_dict['type'] == 'Manhwa':
+        manga_type = 3
     manga_dict = {
         'name': manga_obj_dict['name'],
-        'slug': manga_obj_dict['slug'].lower(),
+        'slug': manga_obj_dict['original_id'].lower(),
         'original': manga_obj_dict['original'],
         'thumb': thumb_path,
         'type': manga_type,
         'status': 1,
+        'description':manga_obj_dict['description'],
+        'author':manga_obj_dict['author'],
+        'genre':manga_obj_dict['genre'],
         'total_view': 0,
         'created_by': 0,
         'updated_by': 0,
         'deleted_by': 0,
         'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
         'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
-        'slug_original': manga_obj_dict['slug']
+        'slug_original': manga_obj_dict['original_id']
     }
 
     manga_dict['search_text'] = manga_dict.get('name', '') + manga_dict.get(
@@ -188,7 +193,7 @@ def resource_builder(resource_obj_dict, chapter_id, bucket):
         "name": '{}'.format(format_leading_img_count(resource_obj_dict['index'])),
         "slug": '{}'.format(format_leading_img_count(resource_obj_dict['index'])),
         "original": resource_obj_dict['original'],
-        "thumb": resource_obj_dict['s3'].replace('/storage', ''),
+        "thumb": resource_obj_dict['s3'].replace('storage/', ''),
         "manga_chapter_id": chapter_id,
         "ordinal": resource_obj_dict['index'],
         'storage': bucket,
@@ -215,7 +220,7 @@ def push_manga_to_db(db, manga):
         idx = hashidx(new_manga.id)
         update_value = {
             'idx': idx,
-            'local_url': 'https://mangamonster.net/' + manga['slug'].lower() + '-m' + idx
+            'local_url': 'https://mangamonster.net/' + manga_dict['slug'].lower() + '-m' + idx
         }
         query_new_manga.update(update_value)
         db.commit()
@@ -241,61 +246,71 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
     if insert:
         logging.info('INSERT MODE')
         db_chapter_obj = chapter_query.first()
-        resource_count = db.query(MangaChapterResources).filter( 
-            MangaChapterResources.manga_chapter_id == db_chapter_obj.id).count()
-        if resource_count == processed_chapter_dict['pages']:
+        resource_count = db.query(MangaChapterResources).filter( MangaChapterResources.manga_chapter_id == db_chapter_obj.id).count()
+        if resource_count != processed_chapter_dict['pages']:
             image_urls = processed_chapter_dict['image_urls']
-            logging.info('Adding resources...')
+            logging.info('Adding resources for chapter id %s...' % db_chapter_obj.id)
             for image in image_urls:
-                image_dict = resource_builder(
-                    image, db_chapter_obj.id, bucket)
+                image_dict = resource_builder(image, db_chapter_obj.id, bucket)
+                image_dict_obj = MangaChapterResources(**image_dict)
+                # logging.info(image_dict)
                 try:
-                    db.add(image_dict)
+                    db.add(image_dict_obj)
                     db.commit()
                 except Exception as ex:
                     db.rollback()
                 logging.info('Saving to s3...')
                 try:
                     image_s3_upload(
-                        s3=s3, s3_path=image['s3'], original_path=image['original'])
+                        s3=s3, s3_path=image['s3'], original_path=image['original'], bucket=bucket)
                 except Exception as ex:
                     error.insert_one({'type':ErrorCategoryEnum.S3_UPLOAD,'date':datetime.now(),'description':str(ex),'data': image['s3'] + '=>' + image['original']})
                     
 
 
-def process_push_to_db(mode='manga'):
+def process_push_to_db(mode='manga', source_site=MangaSourceEnum.MANGASEE.value, insert=True, count=2):
     # Connect DB
     db = Connection().mysql_connect()
     mongo_client = Connection().mongo_connect()
     mongo_db = mongo_client['mangamonster']
     tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
     tx_mangas = mongo_db['tx_mangas']
+    logging.info('Getting data with source site: %s' % source_site)
     list_mangas = tx_mangas.find(
-        {"source_site": MangaSourceEnum.MANGASEE.value})
-    for manga in list_mangas:
+        {"source_site": source_site})
+    for manga in list_mangas[:count]:
         # Check if manga in DB:
         existed_manga_query = db.query(Manga).where(
-            Manga.slug == manga['slug'].lower()).where(Manga.status == 1)
+            Manga.slug == manga['original_id'].lower()).where(Manga.status == 1)
         if mode == 'manga' or mode == 'all':
-            logging.info('INSERT MANGA')
             if existed_manga_query.first() is None:
+                logging.info('Inserting manga: %s' % manga['original_id'])
                 push_manga_to_db(db, manga)
+                process_insert_bucket_mapping(manga['original_id'], tx_manga_bucket_mapping)
+                logging.info('Manga inserted')
         if mode == 'chapter' or mode == 'all':
-            logging.info('INSERT CHAPTER MODE')
+            logging.info('Inserting manga chapters for manga: %s' % manga['original_id'])
             existed_manga = existed_manga_query.first()
-            bucket = tx_manga_bucket_mapping.find_one({"slug": existed_manga.slug})['bucket']
+            bucket = tx_manga_bucket_mapping.find_one({"original_id": existed_manga.slug})['bucket']
             if existed_manga is not None:
-                db_manga_chapter = db.query(MangaChapters).where(MangaChapters.manga_id == existed_manga.id).where(
-                    MangaChapters.ordinal == manga.ordinal).where(MangaChapters.season == manga.season).where(MangaChapters.status == 1).first()
-                if db_manga_chapter is None:
                     chapters = manga['chapters']
                     list_processed_chapter_dict = []
                     for chapter in chapters:
-                        chapter_dict = chapter_builder(chapter, existed_manga.id)
-                        list_processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages': len(chapter['image_urls']), 'image_urls': chapter['image_urls']})
+                        db_manga_chapter = db.query(MangaChapters).where(MangaChapters.manga_id == existed_manga.id).where(MangaChapters.ordinal == chapter['ordinal']).where(MangaChapters.season == chapter['season']).where(MangaChapters.status == 1).first()
+                        if db_manga_chapter is None:
+                            chapter_dict = chapter_builder(chapter, existed_manga.id)
+                            list_processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages': len(chapter['image_urls']), 'image_urls': chapter['image_urls']})
 
                     # Insert to database
                     for processed_chapter_dict in list_processed_chapter_dict:
-                        push_chapter_to_db(db, processed_chapter_dict,bucket,existed_manga.id, insert=True)
+                        push_chapter_to_db(db, processed_chapter_dict,bucket,existed_manga.id, insert=insert)
     db.close()
     
+def process_insert_bucket_mapping(original_id, tx_manga_bucket_mapping):
+    list_buckets = [item.value for item in MangaMonsterBucketEnum]
+    selected_bucket = random.choice(list_buckets)
+    bucket_mapping_data = {
+        'original_id': original_id,
+        'bucket': selected_bucket
+    }
+    tx_manga_bucket_mapping.insert_one(bucket_mapping_data)

@@ -8,7 +8,7 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
 from models.entities import Manga
-from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, process_chapter_ordinal
+from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, process_chapter_ordinal,process_push_to_db
 from configs.config import MAX_THREADS
 from datetime import datetime
 
@@ -223,8 +223,7 @@ class AsuratoonCrawler(Crawler):
             
         for future in futures:
             future.result()
-            break
         
     def push_to_db(self):
-        return super().push_to_db()
-        
+        # logging.info(MangaSourceEnum.ASURATOON.value)
+        process_push_to_db(mode='all', source_site=MangaSourceEnum.ASURATOON.value, insert=True)

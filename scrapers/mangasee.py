@@ -10,7 +10,7 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import MangaMonsterBucketEnum, ErrorCategoryEnum, MangaSourceEnum
 from configs.config import MAX_THREADS, S3_ROOT_DIRECTORY, INSERT_QUEUE
-from utils.crawler_util import get_soup, format_chapter_number, format_leading_chapter, image_s3_upload, format_leading_img_count, format_leading_part, chapter_builder, process_chapter_ordinal, process_push_to_db, push_chapter_to_db
+from utils.crawler_util import get_soup, format_chapter_number, format_leading_chapter, image_s3_upload, format_leading_img_count, format_leading_part, chapter_builder, process_chapter_ordinal, process_push_to_db, push_chapter_to_db, process_insert_bucket_mapping
 from models.entities import Manga, MangaChapters, MangaChapterResources
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -158,18 +158,20 @@ class MangaseeCrawler(Crawler):
                     manga_json['IndexName'])
                 self.get_manga_info(
                     manga_url=manga_url, manga_slug=manga_json['IndexName'], mongo_collection=tx_mangas, error=tx_manga_errors)
+                
+                process_insert_bucket_mapping(manga_json['IndexName'], tx_manga_bucket_mapping)
 
-                list_buckets = [item.value for item in MangaMonsterBucketEnum]
-                selected_bucket = random.choice(list_buckets)
-                bucket_mapping_data = {
-                    'url': manga_json['IndexName'],
-                    'bucket': selected_bucket
-                }
-                tx_manga_bucket_mapping.insert_one(bucket_mapping_data)
+                # list_buckets = [item.value for item in MangaMonsterBucketEnum]
+                # selected_bucket = random.choice(list_buckets)
+                # bucket_mapping_data = {
+                #     'original_id': manga_json['IndexName'],
+                #     'bucket': selected_bucket
+                # }
+                # tx_manga_bucket_mapping.insert_one(bucket_mapping_data)
 
             else:
                 existed_manga_bucket_mapping = tx_manga_bucket_mapping.find_one(
-                    {'url': manga_json['IndexName']})
+                    {'original_id': manga_json['IndexName']})
                 logging.info('Manga %s existed in bucket %s with ID %s' % (
                     manga_json['IndexName'], existed_manga_bucket_mapping['bucket'], existed_manga.id))
 
@@ -259,7 +261,6 @@ class MangaseeCrawler(Crawler):
             mongo_collection.update_one(
                 filter_criteria, {"$set": final_dict}, upsert=True)
             # mongo_collection.insert_one(final_dict)
-            logging.info('%s INSERTED TO DB' % manga_url)
         except Exception as ex:
             tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
 
