@@ -278,7 +278,7 @@ def process_push_to_db(mode='manga', source_site=MangaSourceEnum.MANGASEE.value,
     logging.info('Getting data with source site: %s' % source_site)
     list_mangas = tx_mangas.find(
         {"source_site": source_site})
-    for manga in list_mangas[:count]:
+    for manga in list_mangas:
         # Check if manga in DB:
         existed_manga_query = db.query(Manga).where(
             Manga.slug == manga['original_id'].lower()).where(Manga.status == 1)
