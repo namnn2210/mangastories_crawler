@@ -147,7 +147,7 @@ def manga_builder(manga_obj_dict):
         'slug': manga_obj_dict['original_id'].lower(),
         'original': manga_obj_dict['original'],
         'thumb': thumb_path,
-        'type': manga_type,
+        'manga_type_id': manga_type,
         'status': 1,
         'description':manga_obj_dict['description'],
         'author':manga_obj_dict['author'],
@@ -203,6 +203,7 @@ def resource_builder(resource_obj_dict, chapter_id, bucket):
         'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
         'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
     }
+
 
 
 def push_manga_to_db(db, manga):
