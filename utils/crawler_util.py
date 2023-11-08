@@ -140,6 +140,8 @@ def manga_builder(manga_obj_dict):
         manga_type = 2
     elif manga_obj_dict['type'] == 'Manhwa':
         manga_type = 3
+    else:
+        manga_type = 1
     manga_dict = {
         'name': manga_obj_dict['name'],
         'slug': manga_obj_dict['original_id'].lower(),
