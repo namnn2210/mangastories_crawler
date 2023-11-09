@@ -159,7 +159,7 @@ class MangaseeCrawler(Crawler):
                 self.get_manga_info(
                     manga_url=manga_url, manga_slug=manga_json['IndexName'], mongo_collection=tx_mangas, error=tx_manga_errors)
                 
-                process_insert_bucket_mapping(manga_json['IndexName'], tx_manga_bucket_mapping)
+                selected_bucket = process_insert_bucket_mapping(manga_json['IndexName'], tx_manga_bucket_mapping)
 
             else:
                 existed_manga_bucket_mapping = tx_manga_bucket_mapping.find_one(
@@ -216,7 +216,11 @@ class MangaseeCrawler(Crawler):
             regex = r'vm.Chapters\s=\s.{0,};'
             script = manga_soup.findAll('script')[-1].text
             list_chapters_str_regex = re.search(regex, script)
-            bucket = tx_manga_bucket_mapping.find_one({'original_id': manga_slug})
+            bucket_manga = tx_manga_bucket_mapping.find_one({'original_id': manga_slug})
+            if bucket_manga:
+                bucket = bucket_manga['bucket']
+            else:
+                bucket = process_insert_bucket_mapping(manga_slug, tx_manga_bucket_mapping)
             if list_chapters_str_regex is None:
                 print(f'{manga_url} error list_chapters_str_regex')
                 return None
