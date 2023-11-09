@@ -135,9 +135,9 @@ class AsuratoonCrawler(Crawler):
             else:
                 final_dict[key] = value 
         # Insert or Update 
-        # filter_criteria = {"original_id": final_dict["original_id"]}
-        # mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
-        logging.info(final_dict)
+        filter_criteria = {"original_id": final_dict["original_id"]}
+        mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
+        # logging.info(final_dict)
             
         
     def process_detail(self, list_details, list_genres):
