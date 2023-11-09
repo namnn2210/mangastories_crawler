@@ -32,6 +32,7 @@ class AsuratoonCrawler(Crawler):
         mongo_client = Connection().mongo_connect()
         mongo_db = mongo_client['mangamonster']
         mongo_collection = mongo_db['tx_mangas']
+        tx_manga_errors = mongo_db['tx_manga_errors']
         tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
         
         # Crawl multiple pages
@@ -40,7 +41,7 @@ class AsuratoonCrawler(Crawler):
         logging.info('Total mangas: %s' % len(list_manga_urls))
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping) for manga_url in list_manga_urls]
+            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors) for manga_url in list_manga_urls]
             
         for future in futures:
             future.result()
@@ -73,72 +74,74 @@ class AsuratoonCrawler(Crawler):
         return list_mangas, None
     
     # Extract manga info
-    def extract_manga_info(self,manga_url, mongo_collection, tx_manga_bucket_mapping):
-        logging.info(manga_url)
-        manga_soup = get_soup(manga_url,headers)
-        manga_slug = '-'.join(manga_url.split('/')[-2].split('-')[1:])
-        
-        manga_name = manga_soup.find('h1',{'class':'entry-title'}).text
-        manga_thumb = manga_soup.find('div',{'class':'thumb'}).find('img')['src']
-        manga_type_div = manga_soup.find('span',{'class':'type'})
-        bucket_manga = tx_manga_bucket_mapping.find_one({'original_id': manga_slug})
-        if bucket_manga:
-            bucket = bucket_manga['bucket']
-        else:
-            bucket = process_insert_bucket_mapping(manga_slug, tx_manga_bucket_mapping)
-        if manga_type_div is None:
-            manga_type = ''
-        else:
-            manga_type = manga_type_div.text
-        info_box = manga_soup.find('div',{'class':'infox'})
-        list_details = info_box.find_all('div',{'class':'flex-wrap'})
-        list_genres_div = info_box.find_all('div',{'class':'wd-full'})
-        if len(list_genres_div) > 1:
-            list_genres = list_genres_div[1]
-        else:
-            list_genres = None
-        list_processed_detail, list_processed_genres = self.process_detail(list_details,list_genres)
- 
-        list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
-        manga_count_chapters = len(list_chapters)
-        
-        list_chapters_info = []
-        non_chapter_number_count = 0
-        for chapter in list_chapters:
-            chapter_info_dict, non_chapter_number = self.extract_chapter_info(chapter=chapter, manga_slug=manga_slug, non_chapter_number_count=non_chapter_number_count, bucket=bucket)
-            if non_chapter_number:
-                non_chapter_number_count += 1
-            list_chapters_info.append(chapter_info_dict)
-        final_dict = {
-            'name':manga_name,
-            'original':manga_url,
-            'original_id': manga_slug,
-            'thumb':manga_thumb,
-            'count_chapters': manga_count_chapters, 
-            'chapters': list_chapters_info,
-            'official_translation':'',
-            'rss':'',
-            'type':manga_type,
-            'alternative_name':'',
-            'source_site':MangaSourceEnum.ASURATOON.value
-        }
-        description = manga_soup.find('div',{'itemprop':'description'}).find('p')
-        if description is not None: 
-            final_dict['description'] = description.text + ' (Source: Mangamonster.net)'
-        else:
-            final_dict['description'] = ''
-        final_dict['genre'] = ','.join(list_processed_genres)
-        for detail_dict in list_processed_detail:
-            key, value = next(iter(detail_dict.items()))
-            if key == 'author' and value == '-':
-                final_dict[key] = '' 
-            else:
-                final_dict[key] = value 
-        # Insert or Update 
-        filter_criteria = {"original_id": final_dict["original_id"]}
-        mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
-        # logging.info(final_dict)
+    def extract_manga_info(self,manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors):
+        try:
+            logging.info(manga_url)
+            manga_soup = get_soup(manga_url,headers)
+            manga_slug = '-'.join(manga_url.split('/')[-2].split('-')[1:])
             
+            manga_name = manga_soup.find('h1',{'class':'entry-title'}).text
+            manga_thumb = manga_soup.find('div',{'class':'thumb'}).find('img')['src']
+            manga_type_div = manga_soup.find('span',{'class':'type'})
+            bucket_manga = tx_manga_bucket_mapping.find_one({'original_id': manga_slug})
+            if bucket_manga:
+                bucket = bucket_manga['bucket']
+            else:
+                bucket = process_insert_bucket_mapping(manga_slug, tx_manga_bucket_mapping)
+            if manga_type_div is None:
+                manga_type = ''
+            else:
+                manga_type = manga_type_div.text
+            info_box = manga_soup.find('div',{'class':'infox'})
+            list_details = info_box.find_all('div',{'class':'flex-wrap'})
+            list_genres_div = info_box.find_all('div',{'class':'wd-full'})
+            if len(list_genres_div) > 1:
+                list_genres = list_genres_div[1]
+            else:
+                list_genres = None
+            list_processed_detail, list_processed_genres = self.process_detail(list_details,list_genres)
+    
+            list_chapters = manga_soup.find('ul',{'class':'clstyle'}).find_all('li')
+            manga_count_chapters = len(list_chapters)
+            
+            list_chapters_info = []
+            non_chapter_number_count = 0
+            for chapter in list_chapters:
+                chapter_info_dict, non_chapter_number = self.extract_chapter_info(chapter=chapter, manga_slug=manga_slug, non_chapter_number_count=non_chapter_number_count, bucket=bucket)
+                if non_chapter_number:
+                    non_chapter_number_count += 1
+                list_chapters_info.append(chapter_info_dict)
+            final_dict = {
+                'name':manga_name,
+                'original':manga_url,
+                'original_id': manga_slug,
+                'thumb':manga_thumb,
+                'count_chapters': manga_count_chapters, 
+                'chapters': list_chapters_info,
+                'official_translation':'',
+                'rss':'',
+                'type':manga_type,
+                'alternative_name':'',
+                'source_site':MangaSourceEnum.ASURATOON.value
+            }
+            description = manga_soup.find('div',{'itemprop':'description'}).find('p')
+            if description is not None: 
+                final_dict['description'] = description.text + ' (Source: Mangamonster.net)'
+            else:
+                final_dict['description'] = ''
+            final_dict['genre'] = ','.join(list_processed_genres)
+            for detail_dict in list_processed_detail:
+                key, value = next(iter(detail_dict.items()))
+                if key == 'author' and value == '-':
+                    final_dict[key] = '' 
+                else:
+                    final_dict[key] = value 
+            # Insert or Update 
+            filter_criteria = {"original_id": final_dict["original_id"]}
+            mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
+        # logging.info(final_dict)
+        except Exception as ex:
+            tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
         
     def process_detail(self, list_details, list_genres):
         list_processed_detail = []
