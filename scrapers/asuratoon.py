@@ -8,7 +8,7 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
 from models.entities import Manga
-from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, process_chapter_ordinal,process_push_to_db
+from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, process_chapter_ordinal,process_push_to_db, process_insert_bucket_mapping
 from configs.config import MAX_THREADS
 from datetime import datetime
 
@@ -32,6 +32,7 @@ class AsuratoonCrawler(Crawler):
         mongo_client = Connection().mongo_connect()
         mongo_db = mongo_client['mangamonster']
         mongo_collection = mongo_db['tx_mangas']
+        tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
         
         # Crawl multiple pages
         list_manga_urls = self.get_all_manga_urls()
@@ -39,7 +40,7 @@ class AsuratoonCrawler(Crawler):
         logging.info('Total mangas: %s' % len(list_manga_urls))
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection) for manga_url in list_manga_urls]
+            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping) for manga_url in list_manga_urls]
             
         for future in futures:
             future.result()
@@ -72,7 +73,7 @@ class AsuratoonCrawler(Crawler):
         return list_mangas, None
     
     # Extract manga info
-    def extract_manga_info(self,manga_url, mongo_collection):
+    def extract_manga_info(self,manga_url, mongo_collection, tx_manga_bucket_mapping):
         logging.info(manga_url)
         manga_soup = get_soup(manga_url,headers)
         manga_slug = '-'.join(manga_url.split('/')[-2].split('-')[1:])
@@ -80,6 +81,11 @@ class AsuratoonCrawler(Crawler):
         manga_name = manga_soup.find('h1',{'class':'entry-title'}).text
         manga_thumb = manga_soup.find('div',{'class':'thumb'}).find('img')['src']
         manga_type_div = manga_soup.find('span',{'class':'type'})
+        bucket_manga = tx_manga_bucket_mapping.find_one({'original_id': manga_slug})
+        if bucket_manga:
+            bucket = bucket_manga['bucket']
+        else:
+            bucket = process_insert_bucket_mapping(manga_slug, tx_manga_bucket_mapping)
         if manga_type_div is None:
             manga_type = ''
         else:
@@ -99,7 +105,7 @@ class AsuratoonCrawler(Crawler):
         list_chapters_info = []
         non_chapter_number_count = 0
         for chapter in list_chapters:
-            chapter_info_dict, non_chapter_number = self.extract_chapter_info(chapter=chapter, manga_slug=manga_slug, non_chapter_number_count=non_chapter_number_count)
+            chapter_info_dict, non_chapter_number = self.extract_chapter_info(chapter=chapter, manga_slug=manga_slug, non_chapter_number_count=non_chapter_number_count, bucket=bucket)
             if non_chapter_number:
                 non_chapter_number_count += 1
             list_chapters_info.append(chapter_info_dict)
@@ -129,8 +135,9 @@ class AsuratoonCrawler(Crawler):
             else:
                 final_dict[key] = value 
         # Insert or Update 
-        filter_criteria = {"original_id": final_dict["original_id"]}
-        mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
+        # filter_criteria = {"original_id": final_dict["original_id"]}
+        # mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
+        logging.info(final_dict)
             
         
     def process_detail(self, list_details, list_genres):
@@ -154,30 +161,33 @@ class AsuratoonCrawler(Crawler):
         return list_processed_detail, list_processed_genres
     
         
-    def extract_chapter_info(self, chapter,manga_slug,non_chapter_number_count):
+    def extract_chapter_info(self, chapter,manga_slug,non_chapter_number_count,bucket):
         chapter_url = chapter.find('div',{'class':'eph-num'}).find('a')['href']
         chapter_slug = '-'.join(chapter_url.split('/')[-2].split('-')[1:])
         chapter_soup = get_soup(chapter_url,headers)
         reader_area = chapter_soup.find('div',{'id':'readerarea'})
         list_images = reader_area.find_all('img',{'decoding':'async'})
-        list_image_urls = []
+        list_resources = []
+        chapter_source = None
         str_chapter_num = chapter.find('span',{'class':'chapternum'}).text
         chapter_ordinal = self.process_chapter_number(str_chapter_num)
         if chapter_ordinal is None:
             chapter_ordinal = 0
         chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
-        season_path = format_leading_part(0)
+        chapter_season = format_leading_part(0)
         for index, image in enumerate(list_images):
             original_url = image['src']
-            img_name = '{}.webp'.format(format_leading_img_count(index+1))
-            s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
-                                                season_path, chapter_number, chapter_part, img_name)
-            list_image_urls.append({
-                'index':index+1,
-                'original':original_url,
-                's3':s3_url
-            })
-
+            regex_url = r'^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:\/\n\?\=]+)'
+            chapter_source_match = re.search(regex_url, original_url)
+            if chapter_source_match:
+                chapter_source = chapter_source_match.group()[1]
+                img_url = original_url.replace(chapter_source_match.group(),'')
+            # img_name = '{}.webp'.format(format_leading_img_count(index+1))
+            # s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
+            #                                     chapter_season, chapter_number, chapter_part, img_name)
+            else:
+                img_url = original_url
+            list_resources.append(img_url)
         chapter_info_dict = {
             'ordinal':chapter_ordinal,
             'chapter_number':chapter_number,
@@ -185,9 +195,11 @@ class AsuratoonCrawler(Crawler):
             'slug':chapter_slug ,
             'original':chapter_url,
             'resource_status': 'ORIGINAL',
-            'season':0,
-            'pages':len(list_image_urls),
-            'image_urls':list_image_urls,
+            'season':chapter_season,
+            'pages':len(list_resources),
+            'resources': list_resources,
+            'resources_storage': chapter_source,
+            'resources_bucket': bucket,
             'date':datetime.now(tz=pytz.timezone('America/Chicago'))
         }
         if chapter_ordinal is None:

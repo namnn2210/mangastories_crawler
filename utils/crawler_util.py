@@ -207,6 +207,8 @@ def resource_builder(resource_obj_dict, chapter_id, bucket):
 def push_manga_to_db(db, manga):
     manga_dict = manga_builder(manga)
     manga_obj = Manga(**manga_dict)
+    query_new_manga = db.query(Manga).where(
+        Manga.slug == manga_dict['slug'])
     try:
         db.add(manga_obj)
         db.commit()
@@ -316,3 +318,4 @@ def process_insert_bucket_mapping(original_id, tx_manga_bucket_mapping):
         'bucket': selected_bucket
     }
     tx_manga_bucket_mapping.insert_one(bucket_mapping_data)
+    return selected_bucket
