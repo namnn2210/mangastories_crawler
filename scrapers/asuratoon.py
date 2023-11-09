@@ -180,7 +180,7 @@ class AsuratoonCrawler(Crawler):
             regex_url = r'^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:\/\n\?\=]+)'
             chapter_source_match = re.search(regex_url, original_url)
             if chapter_source_match:
-                chapter_source = chapter_source_match.group()[1]
+                chapter_source = chapter_source_match.group(1)
                 img_url = original_url.replace(chapter_source_match.group(),'')
             # img_name = '{}.webp'.format(format_leading_img_count(index+1))
             # s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
