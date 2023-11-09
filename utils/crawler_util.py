@@ -115,8 +115,6 @@ def image_s3_upload(s3, s3_path, original_path, bucket):
                   ACL='public-read', ContentType='image/webp')
     
 def process_chapter_ordinal(chapter_ordinal):
-    # chapter_number = format_leading_chapter(int(float(chapter_ordinal)))
-    # chapter_part = format_leading_part(int(float(chapter_ordinal) % 1 * 10))
     frac, whole = math.modf(float(chapter_ordinal))
     round_frac = round(frac, 2)
     chapter_number = format_leading_chapter(int(whole))

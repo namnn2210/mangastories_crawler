@@ -161,14 +161,6 @@ class MangaseeCrawler(Crawler):
                 
                 process_insert_bucket_mapping(manga_json['IndexName'], tx_manga_bucket_mapping)
 
-                # list_buckets = [item.value for item in MangaMonsterBucketEnum]
-                # selected_bucket = random.choice(list_buckets)
-                # bucket_mapping_data = {
-                #     'original_id': manga_json['IndexName'],
-                #     'bucket': selected_bucket
-                # }
-                # tx_manga_bucket_mapping.insert_one(bucket_mapping_data)
-
             else:
                 existed_manga_bucket_mapping = tx_manga_bucket_mapping.find_one(
                     {'original_id': manga_json['IndexName']})
@@ -199,6 +191,10 @@ class MangaseeCrawler(Crawler):
                         field = '_'.join(field.split(' '))
                     if field == 'released':
                         field = 'published'
+                    if field == 'author(s):':
+                        field = 'author'
+                    if field == 'genre(s):':
+                        field = 'genre'
                     if field == 'description':
                         value = " ".join(value.split()) + \
                             ' (Source: Mangamonster.net)'
@@ -210,6 +206,7 @@ class MangaseeCrawler(Crawler):
             mongo_client = Connection().mongo_connect()
             mongo_db = mongo_client['mangamonster']
             tx_manga_errors = mongo_db['tx_manga_errors']
+            tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
             logging.info(manga_url)
             manga_soup = get_soup(manga_url, header=header)
             manga_name = manga_soup.find('meta', {'property': 'og:title'})[
@@ -219,6 +216,7 @@ class MangaseeCrawler(Crawler):
             regex = r'vm.Chapters\s=\s.{0,};'
             script = manga_soup.findAll('script')[-1].text
             list_chapters_str_regex = re.search(regex, script)
+            bucket = tx_manga_bucket_mapping.find_one({'original_id': manga_slug})
             if list_chapters_str_regex is None:
                 print(f'{manga_url} error list_chapters_str_regex')
                 return None
@@ -238,7 +236,7 @@ class MangaseeCrawler(Crawler):
                     chapter_source, chapter_info, index_name = self.get_chapter_info(
                         chapter_url)
                     chapter_info_dict = self.extract_chapter_info(
-                        chapter_source, chapter_info, chapter_url, manga_slug)
+                        chapter_source, chapter_info, chapter_url, manga_slug, bucket)
                     list_chapters_info.append(chapter_info_dict)
 
             final_dict = {
@@ -264,7 +262,7 @@ class MangaseeCrawler(Crawler):
         except Exception as ex:
             tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
 
-    def extract_chapter_info(self, chapter_source, chapter_info, chapter_url, manga_slug):
+    def extract_chapter_info(self, chapter_source, chapter_info, chapter_url, manga_slug, bucket):
         formatted_chapter_number = format_leading_chapter(
             format_chapter_number(chapter_info['Chapter']))
         # Process chapter + chapter resources
@@ -280,24 +278,14 @@ class MangaseeCrawler(Crawler):
             directory = ''
             directory_slug = ''
         # Generate resources:
-        list_image_urls = []
+        list_resources = []
         chapter_ordinal = format_chapter_number(chapter_info['Chapter'])
         chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
-        # chapter_number = format_leading_chapter(int(float(format_chapter_number(chapter_info['Chapter']))))
         chapter_season = format_leading_part(int(season))
-        # chapter_part = format_leading_part(int(float(format_chapter_number(chapter_info['Chapter'])) % 1 * 10))
         for i in range(1, int(chapter_info['Page']) + 1):
-            original_url = self.get_image_url(chapter_source=chapter_source, slug=manga_slug, directory=directory,
+            img_url = self.get_image_url(chapter_source=chapter_source, slug=manga_slug, directory=directory,
                                               formatted_chapter_number=formatted_chapter_number, formatted_img_count=format_leading_img_count(i))
-            img_name = '{}.webp'.format(
-                format_leading_img_count(i))
-            s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
-                                                chapter_season, chapter_number, chapter_part, img_name)
-            list_image_urls.append({
-                'index': i,
-                'original': original_url,
-                's3': s3_url
-            })
+            list_resources.append(img_url)
         chapter_info_dict = {
             'ordinal':chapter_ordinal,
             'chapter_number':chapter_number,
@@ -305,9 +293,11 @@ class MangaseeCrawler(Crawler):
             'slug': manga_slug.lower() + directory_slug.lower() + '-chapter-' + format_chapter_number(chapter_info['Chapter']).replace('.', '-'),
             'original': chapter_url,
             'resource_status': 'ORIGINAL',
-            'season': season,
-            'image_urls': list_image_urls,
-            'pages': len(list_image_urls),
+            'season': chapter_season,
+            'resources': list_resources,
+            'resources_storage': chapter_source,
+            'resources_bucket': bucket,
+            'pages': len(list_resources),
             'date': chapter_info['Date']
         }
         return chapter_info_dict
@@ -361,11 +351,11 @@ class MangaseeCrawler(Crawler):
         soup = get_soup(url, header=header)
         return soup.find_all('script')[-1].text
 
-    def get_image_url(self, chapter_source, slug, directory, formatted_chapter_number, formatted_img_count):
+    def get_image_url(self, slug, directory, formatted_chapter_number, formatted_img_count):
         if directory is not None:
-            return 'https://{}/manga/{}/{}/{}-{}.png'.format(chapter_source, slug, directory, formatted_chapter_number, formatted_img_count)
+            return '/manga/{}/{}/{}-{}.png'.format(slug, directory, formatted_chapter_number, formatted_img_count)
         else:
-            return 'https://{}/manga/{}/{}-{}.png'.format(chapter_source, slug, formatted_chapter_number, formatted_img_count)
+            return '/manga/{}/{}-{}.png'.format(slug, formatted_chapter_number, formatted_img_count)
 
     def insert_db(self, db, chapter_obj, row_id, pages):
 
