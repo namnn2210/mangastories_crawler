@@ -283,7 +283,7 @@ class MangaseeCrawler(Crawler):
         chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
         chapter_season = format_leading_part(int(season))
         for i in range(1, int(chapter_info['Page']) + 1):
-            img_url = self.get_image_url(chapter_source=chapter_source, slug=manga_slug, directory=directory,
+            img_url = self.get_image_url(slug=manga_slug, directory=directory,
                                               formatted_chapter_number=formatted_chapter_number, formatted_img_count=format_leading_img_count(i))
             list_resources.append(img_url)
         chapter_info_dict = {
