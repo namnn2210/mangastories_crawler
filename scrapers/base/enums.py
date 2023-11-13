@@ -27,6 +27,7 @@ class MangaSourceEnum(Enum):
     MANHUAUS = 'manhuaus'
     ASURATOON = 'asuratoon'
     MANHUAPLUS = 'manhuaplus'
+    MANGAREADER = 'mangareader'
     
 class ErrorCategoryEnum(Enum):
     S3_UPLOAD = auto()
