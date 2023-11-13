@@ -1,5 +1,5 @@
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, DateTime, SMALLINT, Text, BIGINT, Float
+from sqlalchemy import Column, Integer, String, DateTime, SMALLINT, Text, BIGINT, Float, Double
 from datetime import datetime
 
 Base = declarative_base()
@@ -123,3 +123,52 @@ class MangaChapterResources(Base):
     updated_at = Column(DateTime, default=datetime.now())
     deleted_at = Column(DateTime)
     chapter_source = Column(String(255))
+    
+    
+# class NewManga(Base):
+#     __tablename__ = "tx_mangas"
+
+#     id = Column(Integer, primary_key=True, autoincrement="auto")
+#     idx = Column(String(36))
+#     mal_id = Column(String(36))
+#     name = Column(String(255))
+#     alt_name = Column(String(255))
+#     slug = Column(String(255))
+#     thumb = Column(String(255))
+#     cover = Column(String(255))
+#     description = Column(Text)
+#     original = Column(String(255))
+#     original_id = Column(String(255))
+#     featured = Column(SMALLINT, default=0)
+#     type = Column(SMALLINT, default=1)
+#     ordinal = Column(SMALLINT, default=0)
+#     published = Column(DateTime, default=datetime.now())
+#     publish_status = Column(DateTime, default=datetime.now())
+#     finished = Column(SMALLINT, default=0)
+#     latest_chapter_published= Column(DateTime, default=datetime.now())
+#     status = Column(SMALLINT, default=1)
+#     popularity = Column(Integer)
+#     rank = Column(Integer)
+#     score = Column(Double)
+#     num_scoring_users = Column(Integer)
+#     num_list_users = Column(Integer)
+#     num_chapters = Column(Integer)
+#     num_volumes = Column(Integer)
+#     total_view = Column(Integer)
+#     manga_authors = Column(String(255))
+#     manga_genres = Column(String(255))
+#     manga_type_id = Column(SMALLINT, default=1)
+#     meta_tag_id = Column(BIGINT)
+#     created_by = Column(BIGINT, default=1)
+#     updated_by = Column(BIGINT, default=1)
+#     deleted_by = Column(BIGINT)
+#     created_at = Column(DateTime, default=datetime.now())
+#     updated_at = Column(DateTime, default=datetime.now())
+#     deleted_at = Column(DateTime)
+#     official_translation = Column(String(100))
+#     rss = Column(String(50))
+#     weblink = Column(SMALLINT, default=0)
+#     local_url = Column(String(255))
+#     search_text = Column(Text)
+#     search_field = Column(Text)
+#     slug_original = Column(String(255))

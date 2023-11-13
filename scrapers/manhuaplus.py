@@ -6,7 +6,7 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
 from models.entities import Manga
-from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, process_chapter_ordinal, process_push_to_db
+from utils.crawler_util import get_soup, format_leading_img_count,format_leading_part, process_chapter_ordinal, process_push_to_db, process_insert_bucket_mapping
 from configs.config import MAX_THREADS
 from datetime import datetime
 import pytz
@@ -31,12 +31,13 @@ class ManhuaplusCrawler(Crawler):
         mongo_client = Connection().mongo_connect()
         mongo_db = mongo_client['mangamonster']
         mongo_collection = mongo_db['tx_mangas']
+        tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
         
         # Crawl multiple pages
         list_manga_urls = self.get_all_manga_urls()
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection) for manga_url in list_manga_urls]
+            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping) for manga_url in list_manga_urls]
             
         for future in futures:
             future.result()
@@ -66,7 +67,7 @@ class ManhuaplusCrawler(Crawler):
             return list_mangas, next_page_url
         return list_mangas, None
     
-    def extract_manga_info(self,manga_url, mongo_collection):
+    def extract_manga_info(self,manga_url, mongo_collection, tx_manga_bucket_mapping):
         logging.info(manga_url)
         manga_soup = get_soup(manga_url,headers)
         manga_slug = '-'.join(manga_url.split('/')[-2])
@@ -74,6 +75,11 @@ class ManhuaplusCrawler(Crawler):
         if manga_name is None:
             manga_name = manga_soup.find('h5',{'class':'widget-title'}).find('a')['title']
         manga_thumb = manga_soup.find('meta',{'property':'og:image'})['content']
+        bucket_manga = tx_manga_bucket_mapping.find_one({'original_id': manga_slug})
+        if bucket_manga:
+            bucket = bucket_manga['bucket']
+        else:
+            bucket = process_insert_bucket_mapping(manga_slug, tx_manga_bucket_mapping)
         # manga_type = 'Manhua'
         description = manga_soup.find('meta',{'property':'og:description'})
         list_details = manga_soup.find_all('div',{'class':'post-content_item'})
@@ -85,7 +91,7 @@ class ManhuaplusCrawler(Crawler):
         list_chapters_info = []
         for chapter in list_chapters:
             str_chapter_num = chapter.find('a').text
-            chapter_info_dict = self.extract_chapter_info(chapter=chapter, str_chapter_num=str_chapter_num, manga_slug=manga_slug)
+            chapter_info_dict = self.extract_chapter_info(chapter=chapter, str_chapter_num=str_chapter_num, manga_slug=manga_slug, bucket=bucket)
             list_chapters_info.append(chapter_info_dict)
         
         final_dict = {
@@ -112,10 +118,12 @@ class ManhuaplusCrawler(Crawler):
         filter_criteria = {"original_id": final_dict["original_id"]}
         mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
         
-    def extract_chapter_info(self, chapter, str_chapter_num,manga_slug):
+    def extract_chapter_info(self, chapter, str_chapter_num,manga_slug, bucket):
         chapter_url = chapter.find('a')['href']
         chapter_slug = chapter_url.split('/')[-3] + chapter_url.split('/')[-2]
         chapter_soup = get_soup(chapter_url,headers)
+        list_resources = []
+        chapter_source = None
         reader_area = chapter_soup.find('div',{'class':'reading-content'})
         list_images = reader_area.find_all('div',{'class':'page-break'})
         if len(list_images) == 0:
@@ -133,17 +141,20 @@ class ManhuaplusCrawler(Crawler):
         # str_chapter_num = chapter.find('span',{'class':'chapternum'}).text
         chapter_ordinal = self.process_chapter_number(str_chapter_num)
         chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
-        season_path = format_leading_part(0)
+        chapter_season = format_leading_part(0)
         for index, image in enumerate(list_images):
             original_url = image['src']
-            img_name = '{}.webp'.format(format_leading_img_count(index+1))
-            s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
-                                                season_path, chapter_number, chapter_part, img_name)
-            list_image_urls.append({
-                'index':index,
-                'original':original_url,
-                's3':s3_url
-            })
+            regex_url = r'^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:\/\n\?\=]+)'
+            chapter_source_match = re.search(regex_url, original_url)
+            if chapter_source_match:
+                chapter_source = chapter_source_match.group(1)
+                img_url = original_url.replace(chapter_source_match.group(),'')
+            # img_name = '{}.webp'.format(format_leading_img_count(index+1))
+            # s3_url = '{}/{}/{}/{}/{}/{}'.format('storage', manga_slug.lower(),
+            #                                     chapter_season, chapter_number, chapter_part, img_name)
+            else:
+                img_url = original_url
+            list_resources.append(img_url)
         chapter_info_dict = {
             'ordinal':chapter_ordinal,
             'chapter_number':chapter_number,
@@ -151,9 +162,11 @@ class ManhuaplusCrawler(Crawler):
             'slug':chapter_slug ,
             'original':chapter_url,
             'resource_status': 'ORIGINAL',
-            'season':0,
-            'pages':len(list_image_urls),
-            'image_urls':list_image_urls,
+            'season':chapter_season,
+            'pages':len(list_resources),
+            'resources': list_resources,
+            'resources_storage': chapter_source,
+            'resources_bucket': bucket,
             'date':datetime.now(tz=pytz.timezone('America/Chicago'))
         }
         return chapter_info_dict
@@ -198,6 +211,7 @@ class ManhuaplusCrawler(Crawler):
         mongo_client = Connection().mongo_connect()
         mongo_db = mongo_client['mangamonster']
         mongo_collection = mongo_db['tx_mangas']
+        tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
         list_manga_update = []
         for manga_url in list_manga_urls:
             manga_slug = '-'.join(manga_url.split('/')[-2])
@@ -206,7 +220,7 @@ class ManhuaplusCrawler(Crawler):
                 list_manga_update.append(manga_url)
                 
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection) for manga_url in list_manga_urls]
+            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping) for manga_url in list_manga_urls]
             
         for future in futures:
             future.result()

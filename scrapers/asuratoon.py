@@ -241,4 +241,4 @@ class AsuratoonCrawler(Crawler):
         
     def push_to_db(self):
         # logging.info(MangaSourceEnum.ASURATOON.value)
-        process_push_to_db(mode='all', source_site=MangaSourceEnum.ASURATOON.value, insert=True)
+        process_push_to_db(mode='all', source_site=MangaSourceEnum.ASURATOON.value, insert=True, upload=False)
