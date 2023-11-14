@@ -28,6 +28,8 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 def get_soup(url, header):
     return BeautifulSoup(urlopen(Request(url=url, headers=header)), 'html.parser')
 
+def parse_soup(html_string):
+    return BeautifulSoup(html_string, 'html.parser')
 
 def save_to_json(file_name, json_dict):
     with open(f'json/{file_name}', 'r') as json_file:

@@ -1,7 +1,7 @@
 from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
-from utils.crawler_util import get_soup, process_insert_bucket_mapping, process_chapter_ordinal, format_leading_part
+from utils.crawler_util import get_soup, parse_soup, process_insert_bucket_mapping, process_chapter_ordinal, format_leading_part
 from connections.connection import Connection
 from configs.config import MAX_THREADS
 from datetime import datetime
@@ -10,6 +10,7 @@ import logging
 import concurrent.futures
 import re
 import pytz
+import requests
 
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -150,7 +151,10 @@ class MangareaderCrawler(Crawler):
         chapter_ordinal =  chapter['data-number']
         chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
         chapter_season = format_leading_part(0)
-        reader_area = chapter_soup.find('div',{'class':'container-reader-chapter'})
+        chapter_reading_id = chapter_soup.find('div',{'id':'wrapper'})['data-reading-id']
+        reader_html = requests.get(url=f'https://mangareader.to/ajax/image/list/chap/{chapter_reading_id}?mode=vertical&quality=medium&hozPageSize=1').json()['html']
+        reader_soup = parse_soup(reader_html)
+        reader_area = reader_soup.find('div',{'class':'container-reader-chapter'})
         list_images = reader_area.find_all('div',{'class':'iv-card'})
         list_resources = []
         for image in list_images:
