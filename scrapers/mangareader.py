@@ -40,7 +40,7 @@ class MangareaderCrawler(Crawler):
         logging.info('Total mangas: %s' % len(list_manga_urls))
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping) for manga_url in list_manga_urls[:10]]
+            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors) for manga_url in list_manga_urls[:10]]
             
         for future in futures:
             future.result()
