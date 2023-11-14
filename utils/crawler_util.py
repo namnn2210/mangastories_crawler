@@ -7,7 +7,7 @@ from configs.config import WEBP_QUALITY
 from hashids import Hashids
 from io import BytesIO
 from datetime import datetime
-from models.entities import Manga, MangaChapters, MangaChapterResources
+from models.entities import Manga, MangaChapters, MangaChapterResources, NewManga, NewMangaChapters
 from scrapers.base.enums import MangaSourceEnum, ErrorCategoryEnum, MangaMonsterBucketEnum
 from connections.connection import Connection
 
@@ -125,6 +125,48 @@ def process_chapter_ordinal(chapter_ordinal):
 
     return chapter_number, chapter_part
 
+def new_manga_builder(manga_obj_dict):
+    img = Image.open(BytesIO(requests.get(manga_obj_dict['thumb']).content))
+    today = datetime.now()
+    today_str = '{}/{}/{}'.format(str(today.year),
+                                  str(today.month), str(today.day))
+    thumb_path = 'images/manga/{}/{}.jpg'.format(
+        today_str, manga_obj_dict['original_id'].lower())
+    thumb_save_path = f'/www-data/mangamonster.com/storage/app/public/{thumb_path}'
+    os.makedirs(os.path.dirname(thumb_save_path), exist_ok=True)
+    img.convert('RGB').save(thumb_save_path)
+    if manga_obj_dict['type'] == 'Manga':
+        manga_type = 1
+    elif manga_obj_dict['type'] == 'Manhua':
+        manga_type = 2
+    elif manga_obj_dict['type'] == 'Manhwa':
+        manga_type = 3
+    else:
+        manga_type = 1
+        
+    manga_dict = {
+        'name': manga_obj_dict['name'],
+        'slug': manga_obj_dict['original_id'].lower(),
+        'alt_name':manga_obj_dict.get('alternative_name',''),
+        'original': manga_obj_dict['original'],
+        'original_id':manga_obj_dict['original_id'],
+        'thumb': thumb_path,
+        'manga_type_id': manga_type,
+        'status': 1,
+        'description':manga_obj_dict['description'],
+        'manga_authors':manga_obj_dict['author'],
+        'manga_genres':manga_obj_dict['genre'],
+        'total_view': 0,
+        'created_by': 0,
+        'updated_by': 0,
+        'deleted_by': 0,
+        'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+        'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+    }
+    
+    return manga_dict
+
+
 def manga_builder(manga_obj_dict):
     img = Image.open(BytesIO(requests.get(manga_obj_dict['thumb']).content))
     today = datetime.now()
@@ -168,6 +210,33 @@ def manga_builder(manga_obj_dict):
         'name', '') + manga_obj_dict['type'] + manga_dict.get('author', '') + manga_dict.get('genre', '')
 
     return manga_dict
+
+def new_chapter_builder(chapter_dict, manga_id):
+    return {
+        "name": 'S{} - Chapter {}'.format(chapter_dict['season'], chapter_dict['ordinal']),
+        "slug": chapter_dict['slug'],
+        "original": chapter_dict['original'],
+        "published": chapter_dict['date'],
+        "manga_id": manga_id,
+        "ordinal": chapter_dict['ordinal'],
+        'chapter_no' : chapter_dict['chapter_number'],
+        'chapter_part' : chapter_dict['chapter_part'],
+        'season' : chapter_dict['season'],
+        'chapter_code' : chapter_dict['chapter_number'] + chapter_dict['chapter_part'] + chapter_dict['season'],
+        'resources' :  ','.join(chapter_dict['resources']),
+        'resource_storage' : chapter_dict['resources_storage'],
+        'resource_total' : chapter_dict['resource_total'],
+        'resource_download' : chapter_dict['resource_download'],
+        'resource_bucket': chapter_dict['resource_bucket'],
+        "season": chapter_dict['season'],
+        'status': 1,
+        'total_view': 0,
+        'created_by': 0,
+        'updated_by': 0,
+        'deleted_by': 0,
+        'created_at': chapter_dict['date'],
+        'updated_at': chapter_dict['date'],
+    }
 
 
 def chapter_builder(chapter_dict, manga_id):
@@ -230,7 +299,29 @@ def push_manga_to_db(db, manga):
         }
         query_new_manga.update(update_value)
         db.commit()
-
+        
+def update_object(object, update_dict):
+    for key, value in update_dict.items():
+        if hasattr(object, key):
+            # If the object has an attribute matching the key, update the attribute with the dictionary value
+            setattr(object, key, value)
+    return object
+        
+        
+def new_push_manga_to_db(db,manga):
+    manga_dict = new_manga_builder(manga)
+    manga_obj = NewMangaChapters(**manga_dict)
+    query_new_manga = db.query(NewManga).where(NewManga.slug == manga_dict['slug']).first()
+    if query_new_manga:
+        query_new_manga.update(manga_dict)
+        db.commit()
+    else:
+        try:
+            db.add(manga_obj)
+            db.commit()
+            logging.info('NEW MANGA INSERTED')
+        except Exception as ex:
+            db.rollback
 
 def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True, upload=True, error=None):
     s3 = Connection().s3_connect()
@@ -291,7 +382,7 @@ def process_push_to_db(mode='manga', source_site=MangaSourceEnum.MANGASEE.value,
     logging.info('Getting data with source site: %s' % source_site)
     list_mangas = tx_mangas.find(
         {"source_site": source_site})
-    for manga in list_mangas[:5]:
+    for manga in list_mangas[:10]:
         # Check if manga in DB:
         existed_manga_query = db.query(Manga).where(
             Manga.slug == manga['original_id'].lower()).where(Manga.status == 1)
