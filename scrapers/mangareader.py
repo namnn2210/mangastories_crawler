@@ -76,8 +76,8 @@ class MangareaderCrawler(Crawler):
             logging.info(manga_url)
             manga_soup = get_soup(manga_url,headers)
             manga_original_id = '-'.join(manga_url.split('/')[-1].split('-')[:-1])
-            manga_name = manga_soup.find('h2',{'class':'manga-name'})
-            manga_description = manga_soup.find('div',{'class':'description'})
+            manga_name = manga_soup.find('h2',{'class':'manga-name'}).text
+            manga_description = manga_soup.find('div',{'class':'description'}).text
             manga_thumb = manga_soup.find('div',{'class':'anisc-poster'}).find('img')['src']
             manga_bucket = tx_manga_bucket_mapping.find_one({'original_id': manga_original_id})
             alternative_name_div = manga_soup.find('div', {'class':'manga-name-or'})
