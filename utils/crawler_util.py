@@ -322,6 +322,9 @@ def new_push_manga_to_db(db,manga):
             logging.info('NEW MANGA INSERTED')
         except Exception as ex:
             db.rollback
+            
+def new_push_chapter_to_db(db, processed_chapter_dict, manga_id):
+    pass
 
 def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True, upload=True, error=None):
     s3 = Connection().s3_connect()
