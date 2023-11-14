@@ -75,7 +75,7 @@ class MangareaderCrawler(Crawler):
         # try:
             logging.info(manga_url)
             manga_soup = get_soup(manga_url,headers)
-            manga_original_id = manga_url.split('/')[-1].split('-')[0]
+            manga_original_id = '-'.join(manga_url.split('/')[-1].split('-')[:-1])
             manga_name = manga_soup.find('meta',{'property':'og-title'})
             manga_description = manga_soup.find('meta',{'property':'og-description'})
             manga_thumb = manga_soup.find('div',{'class':'anisc-poster'}).find('img')['src']
@@ -113,7 +113,7 @@ class MangareaderCrawler(Crawler):
                 'official_translation':'',
                 'rss':'',
                 'alternative_name':alternative_name,
-                'source_site':MangaSourceEnum.ASURATOON.value
+                'source_site':MangaSourceEnum.MANGAREADER.value
             }
             for detail_dict in list_processed_details:
                 key, value = next(iter(detail_dict.items()))
