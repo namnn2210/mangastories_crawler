@@ -1,7 +1,7 @@
 from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
-from utils.crawler_util import get_soup, parse_soup, process_insert_bucket_mapping, process_chapter_ordinal, format_leading_part
+from utils.crawler_util import get_soup, parse_soup, process_insert_bucket_mapping, process_chapter_ordinal, format_leading_part, process_push_to_db
 from connections.connection import Connection
 from configs.config import MAX_THREADS
 from datetime import datetime
@@ -76,8 +76,8 @@ class MangareaderCrawler(Crawler):
             logging.info(manga_url)
             manga_soup = get_soup(manga_url,headers)
             manga_original_id = '-'.join(manga_url.split('/')[-1].split('-')[:-1])
-            manga_name = manga_soup.find('meta',{'property':'og-title'})
-            manga_description = manga_soup.find('meta',{'property':'og-description'})
+            manga_name = manga_soup.find('h2',{'class':'manga-name'})
+            manga_description = manga_soup.find('div',{'class':'description'})
             manga_thumb = manga_soup.find('div',{'class':'anisc-poster'}).find('img')['src']
             manga_bucket = tx_manga_bucket_mapping.find_one({'original_id': manga_original_id})
             alternative_name_div = manga_soup.find('div', {'class':'manga-name-or'})
@@ -190,4 +190,4 @@ class MangareaderCrawler(Crawler):
         return super().update_manga()
     
     def push_to_db(self, mode='manga', insert=True):
-        return super().push_to_db(mode, insert)
+        process_push_to_db(mode='all', source_site=MangaSourceEnum.MANGAREADER.value, insert=True, upload=False)
