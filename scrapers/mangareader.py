@@ -71,7 +71,7 @@ class MangareaderCrawler(Crawler):
         return list_mangas, None
     
     def extract_manga_info(self,manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors):
-        # try:
+        try:
             logging.info(manga_url)
             manga_soup = get_soup(manga_url,headers)
             manga_original_id = manga_url.split('/')[-1].split('-')[0]
@@ -79,7 +79,7 @@ class MangareaderCrawler(Crawler):
             manga_description = manga_soup.find('meta',{'property':'og-description'})
             manga_thumb = manga_soup.find('div',{'class':'anisc-poster'}).find('img')['src']
             manga_bucket = tx_manga_bucket_mapping.find_one({'original_id': manga_original_id})
-            alternative_name_div = manga_soup('div', {'class':'manga-name-or'})
+            alternative_name_div = manga_soup.find('div', {'class':'manga-name-or'})
             if alternative_name_div:
                 alternative_name = alternative_name_div.text
             else:
@@ -120,9 +120,9 @@ class MangareaderCrawler(Crawler):
             # Insert or Update 
             filter_criteria = {"original_id": final_dict["original_id"]}
             mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
-        # except Exception as ex:
-        #     logging.info(str(ex))
-        #     tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
+        except Exception as ex:
+            logging.info(str(ex))
+            tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
         
         
     def process_detail(self, info_div):
