@@ -116,6 +116,7 @@ class MangareaderCrawler(Crawler):
             filter_criteria = {"original_id": final_dict["original_id"]}
             mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
         except Exception as ex:
+            logging.info(str(ex))
             tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
         
         
