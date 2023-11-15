@@ -265,6 +265,7 @@ class MangaseeCrawler(Crawler):
                 filter_criteria, {"$set": final_dict}, upsert=True)
             # mongo_collection.insert_one(final_dict)
         except Exception as ex:
+            logging.info(str(ex))
             tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
 
     def extract_chapter_info(self, chapter_source, chapter_info, chapter_url, manga_slug, bucket):
