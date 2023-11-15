@@ -170,9 +170,9 @@ class MangaseeCrawler(Crawler):
         info_group = list_group_flush.find_all(
             'li', {'class': 'list-group-item'})[2]
         manga_raw_info_dict = {}
-        manga_raw_info_dict['alternative_name'] = manga['al']
-        manga_raw_info_dict['author'] = manga['a']
-        manga_raw_info_dict['genre'] = manga['g']
+        manga_raw_info_dict['alternative_name'] = ','.join(manga['al'])
+        manga_raw_info_dict['author'] = ','.join(manga['a'])
+        manga_raw_info_dict['genre'] = ','.join(manga['g'])
         manga_raw_info_dict['published'] = manga['y']
         list_info = str(info_group).split("\n\n")
         for info in list_info[:-1]:
@@ -191,7 +191,7 @@ class MangaseeCrawler(Crawler):
                     if field == 'description':
                         value = " ".join(value.split()) + \
                             ' (Source: Mangamonster.net)'
-                    manga_raw_info_dict[field] = value
+                        manga_raw_info_dict[field] = value
         return manga_raw_info_dict
 
     def get_manga_info(self, manga, mongo_collection):
