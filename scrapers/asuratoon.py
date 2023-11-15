@@ -88,6 +88,11 @@ class AsuratoonCrawler(Crawler):
                 bucket = bucket_manga['bucket']
             else:
                 bucket = process_insert_bucket_mapping(manga_slug, tx_manga_bucket_mapping)
+            manga_status_div = manga_soup.find_all('div',{'class':'imptdt'})[0]
+            if manga_status_div:
+                manga_status = manga_status_div.find('i').text
+            else:
+                manga_status = ''
             if manga_type_div is None:
                 manga_type = ''
             else:
@@ -118,7 +123,8 @@ class AsuratoonCrawler(Crawler):
                 'thumb':manga_thumb,
                 'count_chapters': manga_count_chapters, 
                 'chapters': list_chapters_info,
-                'type':manga_type,
+                'manga_type':manga_type,
+                'manga_status': manga_status,
                 'alternative_name':'',
                 'source_site':MangaSourceEnum.ASURATOON.value
             }

@@ -1,3 +1,4 @@
+from sqlalchemy.types import DECIMAL
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, SMALLINT, Text, BIGINT, Float, Double
 from sqlalchemy.dialects.mysql import LONGTEXT
@@ -58,7 +59,7 @@ class NewMangaChapters(Base):
     description = Column(Text)
     original = Column(String(255))
     original_id = Column(String(255))
-    ordinal = Column(SMALLINT, default=0)
+    ordinal = Column(DECIMAL(10,2))
     chapter_no = Column(Integer)
     chapter_part = Column(SMALLINT, default=0)
     season = Column(SMALLINT, default=0)
@@ -79,4 +80,3 @@ class NewMangaChapters(Base):
     created_at = Column(DateTime, default=datetime.now())
     updated_at = Column(DateTime, default=datetime.now())
     deleted_at = Column(DateTime)
-    official_translation = Column(String(100))

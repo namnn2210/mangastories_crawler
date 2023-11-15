@@ -136,11 +136,11 @@ def new_manga_builder(manga_obj_dict):
     thumb_save_path = f'/www-data/mangamonster.com/storage/app/public/{thumb_path}'
     os.makedirs(os.path.dirname(thumb_save_path), exist_ok=True)
     img.convert('RGB').save(thumb_save_path)
-    if manga_obj_dict['type'] == 'Manga':
+    if manga_obj_dict['manga_type'] == 'Manga':
         manga_type = 1
-    elif manga_obj_dict['type'] == 'Manhua':
+    elif manga_obj_dict['manga_type'] == 'Manhua':
         manga_type = 2
-    elif manga_obj_dict['type'] == 'Manhwa':
+    elif manga_obj_dict['manga_type'] == 'Manhwa':
         manga_type = 3
     else:
         manga_type = 1
@@ -149,11 +149,12 @@ def new_manga_builder(manga_obj_dict):
         'name': manga_obj_dict['name'],
         'slug': manga_obj_dict['original_id'].lower(),
         'alt_name':manga_obj_dict.get('alternative_name',''),
-        'original': manga_obj_dict['original'],
+        'original': manga_obj_dict['source_site'],
         'original_id':manga_obj_dict['original_id'],
         'thumb': thumb_path,
         'manga_type_id': manga_type,
         'status': 1,
+        'published':manga_obj_dict['published'],
         'description':manga_obj_dict['description'],
         'manga_authors':manga_obj_dict['author'],
         'manga_genres':manga_obj_dict['genre'],
@@ -224,11 +225,11 @@ def new_chapter_builder(chapter_dict, manga_id):
         'chapter_part' : chapter_dict['chapter_part'],
         'season' : chapter_dict['season'],
         'chapter_code' : chapter_dict['chapter_number'] + chapter_dict['chapter_part'] + chapter_dict['season'],
+        'ordinal':chapter_dict['ordinal'],
         'resources' :  ','.join(chapter_dict['resources']),
         'resource_storage' : chapter_dict['resources_storage'],
         'resource_total' : chapter_dict['pages'],
-        'resource_download' : chapter_dict['resource_download'],
-        'resource_bucket': chapter_dict['resource_bucket'],
+        'resource_bucket': chapter_dict['resources_bucket'],
         "season": chapter_dict['season'],
         'status': 1,
         'total_view': 0,
@@ -305,11 +306,13 @@ def resource_builder(index, original, s3_path, chapter_id, bucket):
 def new_push_manga_to_db(db,manga,tx_manga_bucket_mapping):
     manga_dict = new_manga_builder(manga)
     manga_obj = NewManga(**manga_dict)
-    logging.info(manga_obj)
-    query_new_manga = db.query(NewManga).where(NewManga.slug == manga_dict['slug']).first()
+    query_new_manga = db.query(NewManga).where(NewManga.original_id == manga_dict['original_id']).first()
     if query_new_manga:
         del manga_dict['thumb']
-        query_new_manga.update(manga_dict)
+        for key, value in manga_dict.items():
+            if key != 'thumb' and key != 'created_at':
+                # query_new_manga.update(manga_dict)
+                setattr(query_new_manga, key, value)
         db.commit()
     else:
         try:
@@ -322,10 +325,12 @@ def new_push_manga_to_db(db,manga,tx_manga_bucket_mapping):
             
 def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_slug, upload=True, error=None):
     s3 = Connection().s3_connect()
-    chapter_dict = processed_chapter_dict['chapter_dict']
-    manga_chapter_obj = NewMangaChapters(**chapter_dict)
-    chapter_query = db.query(NewMangaChapters).filter(NewMangaChapters.manga_id == manga_id,NewMangaChapters.chapter_code == manga_chapter_obj.chapter_code)
+    # chapter_dict = processed_chapter_dict
+    manga_chapter_obj = NewMangaChapters(**processed_chapter_dict)
+    logging.info('Select chapter with manga_id %s and ordinal %s' % (manga_id, manga_chapter_obj.ordinal))
+    chapter_query = db.query(NewMangaChapters).filter(NewMangaChapters.manga_id == manga_id,NewMangaChapters.ordinal == manga_chapter_obj.ordinal)
     chapter_count = chapter_query.count()
+    logging.info('Select count %s' % (chapter_count))
     if chapter_count == 0:
         try:
             db.add(manga_chapter_obj)
@@ -334,7 +339,9 @@ def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_s
             db.rollback()
     else:
         existed_chapter = chapter_query.first()
-        existed_chapter.update(chapter_dict)
+        for key, value in processed_chapter_dict.items():
+            if key != 'created_at':
+                setattr(existed_chapter, key, value)
         db.commit()
 
     if upload:
@@ -419,15 +426,16 @@ def new_process_push_to_db(mode='manga', source_site=MangaSourceEnum.MANGASEE.va
             logging.info('Manga inserted or updated')
         if mode == 'chapter' or mode == 'all':
             existed_manga = db.query(NewManga).where(NewManga.original_id == manga['original_id']).where(NewManga.status == 1).first()
-            bucket = tx_manga_bucket_mapping.find_one({'$or':[ {"original_id": existed_manga.slug_original}, {"original_id": existed_manga.slug_original.lower()}]})['bucket']
+            bucket = tx_manga_bucket_mapping.find_one({'$or':[ {"original_id": existed_manga.original_id}, {"original_id": existed_manga.original_id.lower()}]})['bucket']
             if existed_manga is not None:
                 chapters = manga['chapters']
                 list_processed_chapter_dict = []
                 for chapter in chapters:
-                    db_manga_chapter = db.query(NewMangaChapters).where(NewMangaChapters.manga_id == existed_manga.id).where(NewMangaChapters.chapter_code == chapter['ordinal']).first()
-                    if db_manga_chapter is None:
-                        chapter_dict = new_chapter_builder(chapter, existed_manga.id)
-                        new_push_chapter_to_db(db, chapter_dict, bucket, existed_manga.id, existed_manga.slug, upload, tx_manga_errors)
+                    # chapter_code = chapter['chapter_number'] + chapter['chapter_part'] + chapter['season']
+                    # db_manga_chapter = db.query(NewMangaChapters).where(NewMangaChapters.manga_id == existed_manga.id).where(NewMangaChapters.chapter_code == chapter_code).first()
+                    # if db_manga_chapter is None:
+                    chapter_dict = new_chapter_builder(chapter, existed_manga.id)
+                    new_push_chapter_to_db(db, chapter_dict, bucket, existed_manga.id, existed_manga.slug, upload, tx_manga_errors)
                         # list_processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages': chapter['pages'], 'resources': chapter['resources'], 'resources_storage': chapter['resources_storage']})
         
 
