@@ -192,7 +192,7 @@ class MangaseeCrawler(Crawler):
                         field = '_'.join(field.split(' '))
                     if field == 'released':
                         field = 'published'
-                    if field == 'author(s):':
+                    if field == 'author(s)':
                         field = 'author'
                     if field == 'genre(s):':
                         field = 'genre'
