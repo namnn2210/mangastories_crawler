@@ -4,7 +4,7 @@ DBPASSWORD = 'Bg2023!m1'
 # DBHOST = '10.1.0.3'
 DBHOST = '5.78.77.71'
 DBPORT = 3306
-DBNAME = 'mangamonster_com'
+DBNAME = 'manga_store'
 
 # S3 CONFIG
 S3_ENDPOINT_URL = 'https://ams3.digitaloceanspaces.com'
