@@ -235,7 +235,7 @@ def new_chapter_builder(chapter_dict, manga_id):
         'total_view': 0,
         'created_by': 0,
         'updated_by': 0,
-        'deleted_by': 0,
+        'deleted_by': None,
         'created_at': chapter_dict['date'],
         'updated_at': chapter_dict['date'],
     }
@@ -255,7 +255,7 @@ def chapter_builder(chapter_dict, manga_id):
             'total_view': 0,
             'created_by': 0,
             'updated_by': 0,
-            'deleted_by': 0,
+            'deleted_by': None,
             'created_at': chapter_dict['date'],
             'updated_at': chapter_dict['date'],
         }
