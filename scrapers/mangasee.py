@@ -255,7 +255,7 @@ class MangaseeCrawler(Crawler):
             }
 
             # Extract manga info
-            manga_raw_info_dict = self.extract_manga_info(manga)
+            manga_raw_info_dict = self.extract_manga_info(manga,manga_soup)
             logging.info(manga_raw_info_dict)
             final_dict.update(manga_raw_info_dict)
 
