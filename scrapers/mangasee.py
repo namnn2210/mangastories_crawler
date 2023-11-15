@@ -189,8 +189,6 @@ class MangaseeCrawler(Crawler):
                     value = ' '.join(new_info_soup.find(
                         'div', {'class': 'top-5'}).text.strip('</').split())
                 if field != 'status':
-                    if len(field.split(' ')) > 1:
-                        field = '_'.join(field.split(' '))
                     if field == 'description':
                         value = " ".join(value.split()) + \
                             ' (Source: Mangamonster.net)'
