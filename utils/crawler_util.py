@@ -308,6 +308,7 @@ def new_push_manga_to_db(db,manga,tx_manga_bucket_mapping):
     logging.info(manga_obj)
     query_new_manga = db.query(NewManga).where(NewManga.slug == manga_dict['slug']).first()
     if query_new_manga:
+        del manga_dict['thumb']
         query_new_manga.update(manga_dict)
         db.commit()
     else:
@@ -427,7 +428,7 @@ def new_process_push_to_db(mode='manga', source_site=MangaSourceEnum.MANGASEE.va
                     if db_manga_chapter is None:
                         chapter_dict = new_chapter_builder(chapter, existed_manga.id)
                         new_push_chapter_to_db(db, chapter_dict, bucket, existed_manga.id, existed_manga.slug, upload, tx_manga_errors)
-                        list_processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages': chapter['pages'], 'resources': chapter['resources'], 'resources_storage': chapter['resources_storage']})
+                        # list_processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages': chapter['pages'], 'resources': chapter['resources'], 'resources_storage': chapter['resources_storage']})
         
 
 # def process_push_to_db(mode='manga', source_site=MangaSourceEnum.MANGASEE.value, insert=True, upload=True, count=10):
