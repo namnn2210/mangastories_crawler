@@ -203,10 +203,10 @@ class MangaseeCrawler(Crawler):
             mongo_db = mongo_client['mangamonster']
             tx_manga_errors = mongo_db['tx_manga_errors']
             tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
-            logging.info(manga_url)
             manga_slug = manga['i']
             manga_ss = manga['ss']
             manga_url = f'https://mangasee123.com/manga/{manga_slug}'
+            logging.info(manga_url)
             
             manga_soup = get_soup(manga_url, header=header)
             manga_name = manga_soup.find('meta', {'property': 'og:title'})[
