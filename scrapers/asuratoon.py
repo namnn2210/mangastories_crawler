@@ -145,6 +145,7 @@ class AsuratoonCrawler(Crawler):
             mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
         # logging.info(final_dict)
         except Exception as ex:
+            logging.info(str(ex))
             tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
         
     def process_detail(self, list_details, list_genres):

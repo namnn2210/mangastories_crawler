@@ -72,7 +72,7 @@ class MangareaderCrawler(Crawler):
         return list_mangas, None
     
     def extract_manga_info(self,manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors):
-        # try:
+        try:
             logging.info(manga_url)
             manga_soup = get_soup(manga_url,headers)
             manga_original_id = '-'.join(manga_url.split('/')[-1].split('-')[:-1])
@@ -110,8 +110,6 @@ class MangareaderCrawler(Crawler):
                 'genre':genres,
                 'count_chapters': manga_count_chapters, 
                 'chapters': list_chapters_info,
-                'official_translation':'',
-                'rss':'',
                 'alternative_name':alternative_name,
                 'source_site':MangaSourceEnum.MANGAREADER.value
             }
@@ -121,9 +119,9 @@ class MangareaderCrawler(Crawler):
             # Insert or Update 
             filter_criteria = {"original_id": final_dict["original_id"]}
             mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
-        # except Exception as ex:
-        #     logging.info(str(ex))
-        #     tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
+        except Exception as ex:
+            logging.info(str(ex))
+            tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
         
         
     def process_detail(self, info_div):
