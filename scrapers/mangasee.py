@@ -167,14 +167,15 @@ class MangaseeCrawler(Crawler):
 
     def extract_manga_info(self,manga, manga_soup):
         list_group_flush = manga_soup.find('ul', {'class': 'list-group-flush'})
-        info_group = list_group_flush.find_all('li', {'class': 'list-group-item'})
-        logging.info(info_group)
+        info_group = list_group_flush.find_all(
+            'li', {'class': 'list-group-item'})[2]
         manga_raw_info_dict = {}
         manga_raw_info_dict['alternative_name'] = manga['al']
         manga_raw_info_dict['author'] = manga['a']
         manga_raw_info_dict['genre'] = manga['g']
         manga_raw_info_dict['published'] = manga['y']
-        # list_info = str(info_group).split("\n\n")
+        list_info = str(info_group).split("\n\n")
+        logging.info(list_info)
         # for info in list_info[:-1]:
         #     new_info = info.strip(
         #         """ <li class="list-group-item {{vm.ShowInfoMobile ? '' : 'd-none d-md-block' }}"> """)
