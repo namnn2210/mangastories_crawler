@@ -166,7 +166,7 @@ def new_manga_builder(manga_obj_dict):
         'total_view': 0,
         'created_by': 0,
         'updated_by': 0,
-        'deleted_by': 0,
+        'deleted_by': None,
         'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
         'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
     }
@@ -205,7 +205,7 @@ def manga_builder(manga_obj_dict):
         'total_view': 0,
         'created_by': 0,
         'updated_by': 0,
-        'deleted_by': 0,
+        'deleted_by': None,
         'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
         'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
         'slug_original': manga_obj_dict['original_id']
