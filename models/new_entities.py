@@ -1,6 +1,6 @@
 from sqlalchemy.types import DECIMAL
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, DateTime, SMALLINT, Text, BIGINT, Float, Double
+from sqlalchemy import Column, Integer, String, DateTime, SMALLINT, Text, BIGINT, Float, Double, JSON
 from sqlalchemy.dialects.mysql import LONGTEXT
 from datetime import datetime
 
@@ -64,7 +64,7 @@ class NewMangaChapters(Base):
     chapter_part = Column(SMALLINT, default=0)
     season = Column(SMALLINT, default=0)
     chapter_code = Column(String(255))
-    resources =  Column(LONGTEXT)
+    resources =  Column(JSON)
     resource_storage = Column(String(255))
     resource_total = Column(Integer)
     resource_download = Column(SMALLINT, default=0)

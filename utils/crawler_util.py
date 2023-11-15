@@ -153,6 +153,7 @@ def new_manga_builder(manga_obj_dict):
         'original_id':manga_obj_dict['original_id'],
         'thumb': thumb_path,
         'manga_type_id': manga_type,
+        'publish_status':manga_obj_dict['manga_status'],
         'status': 1,
         'published':manga_obj_dict['published'],
         'description':manga_obj_dict['description'],
@@ -218,7 +219,6 @@ def new_chapter_builder(chapter_dict, manga_id):
         "name": 'S{} - Chapter {}'.format(chapter_dict['season'], chapter_dict['ordinal']),
         "slug": chapter_dict['slug'],
         "original": chapter_dict['original'],
-        "published": chapter_dict['date'],
         "manga_id": manga_id,
         "ordinal": chapter_dict['ordinal'],
         'chapter_no' : chapter_dict['chapter_number'],
@@ -226,7 +226,7 @@ def new_chapter_builder(chapter_dict, manga_id):
         'season' : chapter_dict['season'],
         'chapter_code' : chapter_dict['chapter_number'] + chapter_dict['chapter_part'] + chapter_dict['season'],
         'ordinal':chapter_dict['ordinal'],
-        'resources' :  ','.join(chapter_dict['resources']),
+        'resources' : chapter_dict['resources'],
         'resource_storage' : chapter_dict['resources_storage'],
         'resource_total' : chapter_dict['pages'],
         'resource_bucket': chapter_dict['resources_bucket'],
@@ -309,6 +309,7 @@ def new_push_manga_to_db(db,manga,tx_manga_bucket_mapping):
     query_new_manga = db.query(NewManga).where(NewManga.original_id == manga_dict['original_id']).first()
     if query_new_manga:
         del manga_dict['thumb']
+        manga_dict['idx'] = hashidx(query_new_manga.id)
         for key, value in manga_dict.items():
             if key != 'thumb' and key != 'created_at':
                 # query_new_manga.update(manga_dict)
@@ -328,17 +329,30 @@ def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_s
     # chapter_dict = processed_chapter_dict
     manga_chapter_obj = NewMangaChapters(**processed_chapter_dict)
     logging.info('Select chapter with manga_id %s and ordinal %s' % (manga_id, manga_chapter_obj.ordinal))
-    chapter_query = db.query(NewMangaChapters).filter(NewMangaChapters.manga_id == manga_id,NewMangaChapters.ordinal == manga_chapter_obj.ordinal)
+    chapter_query = db.query(NewMangaChapters).filter(NewMangaChapters.manga_id == manga_id,NewMangaChapters.ordinal == float(manga_chapter_obj.ordinal))
     chapter_count = chapter_query.count()
     logging.info('Select count %s' % (chapter_count))
     if chapter_count == 0:
         try:
             db.add(manga_chapter_obj)
             db.commit()
+            
+            # Update idx after insert
+            
+            new_manga_chapter = chapter_query.first()
+            if new_manga_chapter is not None:
+                idx = hashidx(new_manga_chapter.id)
+                update_value = {
+                    'idx': idx,
+                }
+                new_manga_chapter.update(update_value)
+                db.commit()
         except Exception as ex:
             db.rollback()
     else:
         existed_chapter = chapter_query.first()
+        logging.info(existed_chapter)
+        processed_chapter_dict['idx'] = hashidx(existed_chapter.id)
         for key, value in processed_chapter_dict.items():
             if key != 'created_at':
                 setattr(existed_chapter, key, value)
