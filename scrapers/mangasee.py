@@ -175,25 +175,23 @@ class MangaseeCrawler(Crawler):
         manga_raw_info_dict['genre'] = manga['g']
         manga_raw_info_dict['published'] = manga['y']
         list_info = str(info_group).split("\n\n")
-        logging.info(list_info)
-        # for info in list_info[:-1]:
-        #     new_info = info.strip(
-        #         """ <li class="list-group-item {{vm.ShowInfoMobile ? '' : 'd-none d-md-block' }}"> """)
-        #     new_info_soup = BeautifulSoup(new_info, 'html.parser')
-        #     if new_info_soup.find('span') is not None:
-        #         field = new_info_soup.find('span').text.replace('\n', '').replace('(s)', '').replace(':',
-        #                                                                                              '').lower()
-        #         if len(new_info_soup.find_all('a')) > 0:
-        #             value = ','.join([x.text.strip('</')
-        #                               for x in new_info_soup.find_all('a')])
-        #         else:
-        #             value = ' '.join(new_info_soup.find(
-        #                 'div', {'class': 'top-5'}).text.strip('</').split())
-        #         if field != 'status':
-        #             if field == 'description':
-        #                 value = " ".join(value.split()) + \
-        #                     ' (Source: Mangamonster.net)'
-        #             manga_raw_info_dict[field] = value
+        for info in list_info[:-1]:
+            new_info = info.strip(
+                """ <li class="list-group-item {{vm.ShowInfoMobile ? '' : 'd-none d-md-block' }}"> """)
+            new_info_soup = BeautifulSoup(new_info, 'html.parser')
+            if new_info_soup.find('span') is not None:
+                field = new_info_soup.find('span').text.replace('\n', '').replace('(s)', '').replace(':','').lower()
+                if len(new_info_soup.find_all('a')) > 0:
+                    value = ','.join([x.text.strip('</')
+                                      for x in new_info_soup.find_all('a')])
+                else:
+                    value = ' '.join(new_info_soup.find(
+                        'div', {'class': 'top-5'}).text.strip('</').split())
+                if field != 'status':
+                    if field == 'description':
+                        value = " ".join(value.split()) + \
+                            ' (Source: Mangamonster.net)'
+                    manga_raw_info_dict[field] = value
         return manga_raw_info_dict
 
     def get_manga_info(self, manga, mongo_collection):
