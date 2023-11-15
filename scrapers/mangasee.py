@@ -54,11 +54,8 @@ class MangaseeCrawler(Crawler):
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             # Submit each manga for processing to the executor
             for manga in list_mangas:
-                manga_slug = manga['i']
-                manga_ss = manga['ss']
-                manga_url = f'https://mangasee123.com/manga/{manga_slug}'
                 future = executor.submit(
-                    self.get_manga_info, manga_url, manga_slug,manga_ss, mongo_collection)
+                    self.get_manga_info, manga, mongo_collection)
                 futures.append(future)
 
         #     # Wait for all tasks to complete and get the results
@@ -168,11 +165,15 @@ class MangaseeCrawler(Crawler):
         #         logging.info('Manga %s existed in bucket %s with ID %s' % (
         #             manga_json['IndexName'], existed_manga_bucket_mapping['bucket'], existed_manga.id))
 
-    def extract_manga_info(self, manga_soup):
+    def extract_manga_info(self,manga, manga_soup):
         list_group_flush = manga_soup.find('ul', {'class': 'list-group-flush'})
         info_group = list_group_flush.find_all(
             'li', {'class': 'list-group-item'})[2]
         manga_raw_info_dict = {}
+        manga_raw_info_dict['alternative_name'] = manga['al']
+        manga_raw_info_dict['author'] = manga['a']
+        manga_raw_info_dict['genre'] = manga['g']
+        manga_raw_info_dict['published'] = manga['y']
         list_info = str(info_group).split("\n\n")
         for info in list_info[:-1]:
             new_info = info.strip(
@@ -190,25 +191,23 @@ class MangaseeCrawler(Crawler):
                 if field != 'status':
                     if len(field.split(' ')) > 1:
                         field = '_'.join(field.split(' '))
-                    if field == 'released':
-                        field = 'published'
-                    if field == 'author':
-                        field = 'author'
-                    if field == 'genre':
-                        field = 'genre'
                     if field == 'description':
                         value = " ".join(value.split()) + \
                             ' (Source: Mangamonster.net)'
                     manga_raw_info_dict[field] = value
         return manga_raw_info_dict
 
-    def get_manga_info(self, manga_url, manga_slug, manga_ss, mongo_collection):
+    def get_manga_info(self, manga, mongo_collection):
         try:
             mongo_client = Connection().mongo_connect()
             mongo_db = mongo_client['mangamonster']
             tx_manga_errors = mongo_db['tx_manga_errors']
             tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
             logging.info(manga_url)
+            manga_slug = manga['i']
+            manga_ss = manga['ss']
+            manga_url = f'https://mangasee123.com/manga/{manga_slug}'
+            
             manga_soup = get_soup(manga_url, header=header)
             manga_name = manga_soup.find('meta', {'property': 'og:title'})[
                 'content'].split('|')[0].strip()
@@ -256,7 +255,7 @@ class MangaseeCrawler(Crawler):
             }
 
             # Extract manga info
-            manga_raw_info_dict = self.extract_manga_info(manga_soup)
+            manga_raw_info_dict = self.extract_manga_info(manga)
             logging.info(manga_raw_info_dict)
             final_dict.update(manga_raw_info_dict)
 
