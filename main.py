@@ -1,3 +1,4 @@
+from sqlalchemy import null
 from scrapers.mangasee import MangaseeCrawlerFactory
 from scrapers.asuratoon import AsuratoonCrawlerFactory
 from scrapers.manhuaplus import ManhuaplusCrawlerFactory 
@@ -13,7 +14,7 @@ def push_not():
     from connections.connection import Connection
     from models.new_entities import NewManga
     db = Connection().mysql_connect()
-    list_original_ids = [item[0] for item in db.query(NewManga.original_id).where(NewManga.name == '').all()]
+    list_original_ids = [item[0] for item in db.query(NewManga.original_id).where(NewManga.name == '').where(NewManga.original_id is not null).all()]
     return list_original_ids
 
 if __name__ == "__main__":
@@ -22,4 +23,5 @@ if __name__ == "__main__":
     # manhuaplus = ManhuaplusCrawlerFactory().create_crawler().crawl()
     # mangareader = MangareaderCrawlerFactory().create_crawler().push_to_db()
     list_original_ids = push_not()
-    mangasee = MangaseeCrawlerFactory().create_crawler().push_to_db(mode='crawl', type='all', list_update_original_id=list_original_ids, upload=False)
+    # print(list_original_ids)
+    mangasee = MangaseeCrawlerFactory().create_crawler().push_to_db(mode='crawl', type='all', list_update_original_id=list_original_ids)
