@@ -24,4 +24,4 @@ if __name__ == "__main__":
     # mangareader = MangareaderCrawlerFactory().create_crawler().push_to_db()
     list_original_ids = push_not()
     # print(list_original_ids)
-    mangasee = MangaseeCrawlerFactory().create_crawler().push_to_db(mode='crawl', type='all', list_update_original_id=list_original_ids)
+    mangasee = MangaseeCrawlerFactory().create_crawler().push_to_db(mode='update', type='all', list_update_original_id=list_original_ids)
