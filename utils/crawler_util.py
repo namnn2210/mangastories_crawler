@@ -315,7 +315,7 @@ def resource_builder(index, original, s3_path, chapter_id, bucket):
 def new_push_manga_to_db(db,manga,tx_manga_bucket_mapping):
     manga_dict = new_manga_builder(manga)
     manga_obj = NewManga(**manga_dict)
-    query_new_manga = db.query(NewManga).where(NewManga.original_id == manga_dict['original_id']).first()
+    query_new_manga = db.query(NewManga).where(NewManga.original_id == manga_dict['original_id'])
     existed_new_manga = query_new_manga.first()
     if existed_new_manga:
         del manga_dict['thumb']
