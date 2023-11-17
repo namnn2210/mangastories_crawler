@@ -199,8 +199,8 @@ class ManhuaplusCrawler(Crawler):
             return None
     
         
-    def push_to_db(self, mode='manga', upload=False, count=None):
-        new_process_push_to_db(mode='all', source_site=MangaSourceEnum.MANHUAPLUS.value, upload=upload, count=count)
+    def push_to_db(self, mode='crawl', type='manga', list_update_original_id=None, upload=False, count=None):
+        new_process_push_to_db(mode=mode, type=type, list_update_original_id=list_update_original_id, source_site=MangaSourceEnum.MANHUAPLUS.value, upload=upload, count=count)
     
     def update_chapter(self):
         return super().update_chapter()

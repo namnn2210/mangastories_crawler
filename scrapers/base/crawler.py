@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 class Crawler(ABC):
     @abstractmethod
-    def crawl(self):
+    def crawl(self, original_id=None):
         pass
     
     @abstractmethod
