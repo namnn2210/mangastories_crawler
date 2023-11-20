@@ -251,6 +251,8 @@ def new_chapter_builder(chapter_dict, manga_id):
 
 
 def chapter_builder(chapter_dict, manga_id):
+    
+    
     return  {
             "name": 'S{} - Chapter {}'.format(chapter_dict['season'], chapter_dict['ordinal']),
             "slug": chapter_dict['slug'],
