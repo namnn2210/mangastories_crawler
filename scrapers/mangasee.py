@@ -11,7 +11,7 @@ from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import MangaMonsterBucketEnum, ErrorCategoryEnum, MangaSourceEnum
 from configs.config import MAX_THREADS, S3_ROOT_DIRECTORY, INSERT_QUEUE
-from utils.crawler_util import get_soup, format_chapter_number, format_leading_chapter, format_leading_img_count, format_leading_part, chapter_builder, process_chapter_ordinal, new_process_push_to_db, process_insert_bucket_mapping
+from utils.crawler_util import get_soup, format_chapter_number, format_leading_chapter, format_leading_img_count, format_leading_part, chapter_builder, process_chapter_ordinal, new_process_push_to_db, process_insert_bucket_mapping, process_push_to_db
 # from models.entities import Manga, MangaChapters, MangaChapterResources
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -46,7 +46,8 @@ class MangaseeCrawler(Crawler):
         directory_regex = r'vm.Directory\s=\s.{0,};'
         directory_match = re.search(directory_regex, script)
         if directory_match:
-            directory_json_str = directory_match.group().replace('vm.Directory = ', '').replace(';', '')
+            directory_json_str = directory_match.group().replace(
+                'vm.Directory = ', '').replace(';', '')
             list_mangas = json.loads(directory_json_str)
             list_mangas_final = list_mangas
         if original_ids:
@@ -56,7 +57,7 @@ class MangaseeCrawler(Crawler):
                     if item.get('i') == id:
                         list_mangas_final.append(item)
             # list_mangas_final = [item for item in list_mangas if item.get('i') == original_id]
-            
+
         futures = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             # Submit each manga for processing to the executor
@@ -69,7 +70,7 @@ class MangaseeCrawler(Crawler):
         for future in futures:
             future.result()
             break
-        
+
     def update_chapter(self):
         logging.info('Updating new chapters...')
 
@@ -91,16 +92,18 @@ class MangaseeCrawler(Crawler):
                 'vm.LatestJSON = ', '').replace(';', '')
             list_latest_json = json.loads(latest_json_str)
         list_update_json = list_hot_update + list_latest_json
-        list_update_original_id = set([item['IndexName'] for item in list_update_json])
+        list_update_original_id = set(
+            [item['IndexName'] for item in list_update_json])
         # Crawl update
         logging.info('%s update found' % len(list_update_original_id))
         self.crawl(original_ids=list(list_update_original_id))
         # Update to DB
-        self.push_to_db(mode='update', type='chapter', list_update_original_id=list(list_update_original_id), upload=False)
+        self.push_to_db(mode='update', type='chapter', list_update_original_id=list(
+            list_update_original_id), upload=False)
 
     def update_manga(self):
         logging.info('Updating new mangas...')
-        
+
         manga_url = 'https://mangasee123.com/'
         soup = get_soup(manga_url, header=header)
         script = soup.findAll('script')[-1].text
@@ -115,10 +118,10 @@ class MangaseeCrawler(Crawler):
             manga_json = self.string_to_json(manga)
             list_new_original_ids.append(manga_json['IndexName'])
         self.crawl(original_ids=list_new_original_ids)
-        self.push_to_db(mode='crawl', type='all', list_update_original_id=list_new_original_ids, upload=True)
-        
+        self.push_to_db(mode='crawl', type='all',
+                        list_update_original_id=list_new_original_ids, upload=True)
 
-    def extract_manga_info(self,manga, manga_soup):
+    def extract_manga_info(self, manga, manga_soup):
         list_group_flush = manga_soup.find('ul', {'class': 'list-group-flush'})
         info_group = list_group_flush.find_all(
             'li', {'class': 'list-group-item'})[2]
@@ -134,7 +137,8 @@ class MangaseeCrawler(Crawler):
                 """ <li class="list-group-item {{vm.ShowInfoMobile ? '' : 'd-none d-md-block' }}"> """)
             new_info_soup = BeautifulSoup(new_info, 'html.parser')
             if new_info_soup.find('span') is not None:
-                field = new_info_soup.find('span').text.replace('\n', '').replace('(s)', '').replace(':','').lower()
+                field = new_info_soup.find('span').text.replace(
+                    '\n', '').replace('(s)', '').replace(':', '').lower()
                 if len(new_info_soup.find_all('a')) > 0:
                     value = ','.join([x.text.strip('</')
                                       for x in new_info_soup.find_all('a')])
@@ -158,7 +162,7 @@ class MangaseeCrawler(Crawler):
             manga_ss = manga['ss']
             manga_url = f'https://mangasee123.com/manga/{manga_slug}'
             logging.info(manga_url)
-            
+
             manga_soup = get_soup(manga_url, header=header)
             manga_name = manga_soup.find('meta', {'property': 'og:title'})[
                 'content'].split('|')[0].strip()
@@ -167,11 +171,13 @@ class MangaseeCrawler(Crawler):
             regex = r'vm.Chapters\s=\s.{0,};'
             script = manga_soup.findAll('script')[-1].text
             list_chapters_str_regex = re.search(regex, script)
-            bucket_manga = tx_manga_bucket_mapping.find_one({'original_id': manga_slug})
+            bucket_manga = tx_manga_bucket_mapping.find_one(
+                {'original_id': manga_slug})
             if bucket_manga:
                 bucket = bucket_manga['bucket']
             else:
-                bucket = process_insert_bucket_mapping(manga_slug, tx_manga_bucket_mapping)
+                bucket = process_insert_bucket_mapping(
+                    manga_slug, tx_manga_bucket_mapping)
             if list_chapters_str_regex is None:
                 print(f'{manga_url} error list_chapters_str_regex')
                 return None
@@ -201,12 +207,12 @@ class MangaseeCrawler(Crawler):
                 'thumb': manga_thumb,
                 'count_chapters': manga_count_chapters,
                 'chapters': list_chapters_info,
-                'manga_status':manga_ss,
+                'manga_status': manga_ss,
                 'source_site': MangaSourceEnum.MANGASEE.value
             }
 
             # Extract manga info
-            manga_raw_info_dict = self.extract_manga_info(manga,manga_soup)
+            manga_raw_info_dict = self.extract_manga_info(manga, manga_soup)
             logging.info('============%s' % manga_raw_info_dict)
             final_dict.update(manga_raw_info_dict)
 
@@ -217,7 +223,8 @@ class MangaseeCrawler(Crawler):
             # mongo_collection.insert_one(final_dict)
         except Exception as ex:
             logging.info(str(ex))
-            tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
+            tx_manga_errors.insert_one({'type': ErrorCategoryEnum.MANGA_PROCESSING.name, 'date': datetime.now(
+            ), 'description': str(ex), 'data': ''})
 
     def extract_chapter_info(self, chapter_source, chapter_info, chapter_url, manga_slug, bucket):
         formatted_chapter_number = format_leading_chapter(
@@ -241,12 +248,12 @@ class MangaseeCrawler(Crawler):
         chapter_season = format_leading_part(int(season))
         for i in range(1, int(chapter_info['Page']) + 1):
             img_url = self.get_image_url(slug=manga_slug, directory=directory,
-                                              formatted_chapter_number=formatted_chapter_number, formatted_img_count=format_leading_img_count(i))
+                                         formatted_chapter_number=formatted_chapter_number, formatted_img_count=format_leading_img_count(i))
             list_resources.append(img_url)
         chapter_info_dict = {
-            'ordinal':chapter_ordinal,
-            'chapter_number':chapter_number,
-            'chapter_part':chapter_part,
+            'ordinal': chapter_ordinal,
+            'chapter_number': chapter_number,
+            'chapter_part': chapter_part,
             'slug': manga_slug.lower() + directory_slug.lower() + '-chapter-' + format_chapter_number(chapter_info['Chapter']).replace('.', '-'),
             'original': chapter_url,
             'resource_status': 'ORIGINAL',
@@ -259,8 +266,13 @@ class MangaseeCrawler(Crawler):
         }
         return chapter_info_dict
 
-    def push_to_db(self, mode='crawl', type='manga', list_update_original_id=None, upload=False, count=None):
-        new_process_push_to_db(mode=mode, type=type, list_update_original_id=list_update_original_id, source_site=MangaSourceEnum.MANGASEE.value, upload=upload, count=count)
+    def push_to_db(self, mode='crawl', type='manga', list_update_original_id=None, upload=False, count=None, new=True):
+        if new:
+            new_process_push_to_db(mode=mode, type=type, list_update_original_id=list_update_original_id,
+                                   source_site=MangaSourceEnum.MANGASEE.value, upload=upload, count=count)
+        else:
+            process_push_to_db(
+                mode='manga', source_site=MangaSourceEnum.MANGASEE.value, insert=True, upload=True, count=20)
 
     def string_to_json(self, chapter_str):
         if not chapter_str.endswith('}'):

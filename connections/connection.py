@@ -8,27 +8,29 @@ import boto3
 import botocore
 import pymongo
 
+
 class Connection():
-    
-    def get_connection(self):
+
+    def get_connection(self, db_name=DBNAME):
         return create_engine(
-            url=f"mysql+pymysql://{DBUSERNAME}:{DBPASSWORD}@{DBHOST}:{DBPORT}/{DBNAME}"
+            url=f"mysql+pymysql://{DBUSERNAME}:{DBPASSWORD}@{DBHOST}:{DBPORT}/{db_name}"
         )
-    
-    def mysql_connect(self):
-        engine = self.get_connection()
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def mysql_connect(self, db_name=DBNAME):
+        engine = self.get_connection(db_name)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine)
         db = SessionLocal()
         return db
-    
+
     def mongo_connect(self):
         client = pymongo.MongoClient("mongodb://localhost:27018/")
         return client["mangamonster"]
-    
+
     def redis_connect(self, db=2, queue_name=''):
         redis_cache = RedisCache(db=db)
         return Queue(queue_name, connection=redis_cache.get_redis(), default_timeout=3600)
-    
+
     def s3_connect(self):
         session = boto3.session.Session()
         client = session.client('s3',
@@ -44,6 +46,3 @@ class Connection():
                                 aws_secret_access_key=S3_AWS_SECRET_ACCESS_KEY)  # Secret access key defined through an environment variable.
 
         return client
-
-    
-    
