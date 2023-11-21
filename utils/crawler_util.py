@@ -224,7 +224,7 @@ def manga_builder(manga_obj_dict):
     manga_dict['search_text'] = manga_dict.get('name', '') + manga_dict.get(
         'description', '') + manga_dict.get('author', '') + manga_dict.get('genre', '')
     manga_dict['search_field'] = manga_dict.get(
-        'name', '') + manga_obj_dict['type'] + manga_dict.get('author', '') + manga_dict.get('genre', '')
+        'name', '') + manga_obj_dict['manga_type'] + manga_dict.get('author', '') + manga_dict.get('genre', '')
 
     return manga_dict
 
