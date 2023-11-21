@@ -194,11 +194,11 @@ def manga_builder(manga_obj_dict):
     thumb_save_path = f'/www-data/mangamonster.com/storage/app/public/{thumb_path}'
     os.makedirs(os.path.dirname(thumb_save_path), exist_ok=True)
     img.convert('RGB').save(thumb_save_path)
-    if manga_obj_dict['type'] == 'Manga':
+    if manga_obj_dict['manga_type'] == 'Manga':
         manga_type = 1
-    elif manga_obj_dict['type'] == 'Manhua':
+    elif manga_obj_dict['manga_type'] == 'Manhua':
         manga_type = 2
-    elif manga_obj_dict['type'] == 'Manhwa':
+    elif manga_obj_dict['manga_type'] == 'Manhwa':
         manga_type = 3
     else:
         manga_type = 1
