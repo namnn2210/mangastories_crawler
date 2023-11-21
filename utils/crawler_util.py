@@ -538,7 +538,7 @@ def process_push_to_db(mode='manga', source_site=MangaSourceEnum.MANGASEE.value,
                     if db_manga_chapter is None:
                         chapter_dict = chapter_builder(
                             chapter, existed_manga.id)
-                        s3_prefix = existed_manga.slug_original.lower() + '/' + \
+                        s3_prefix = 'storage/' + existed_manga.slug_original.lower() + '/' + \
                             chapter['season'] + '/' + chapter['chapter_number'] + \
                             '/' + chapter['chapter_part']
                         list_processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages': chapter['pages'], 'resources': chapter[
