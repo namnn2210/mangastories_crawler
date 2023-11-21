@@ -13,7 +13,7 @@ def create_and_run_crawler(factory):
 
 
 if __name__ == "__main__":
-    asuratoon = AsuratoonCrawlerFactory().create_crawler().push_to_db()
+    asuratoon = AsuratoonCrawlerFactory().create_crawler().push_to_db(type='all')
     # mangasee = MangaseeCrawlerFactory().create_crawler().push_to_db(new=True)
     # manhuaplus = ManhuaplusCrawlerFactory().create_crawler().crawl()
     # mangareader = MangareaderCrawlerFactory().create_crawler().push_to_db()
