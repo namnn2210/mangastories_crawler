@@ -269,4 +269,4 @@ class AsuratoonCrawler(Crawler):
                                    source_site=MangaSourceEnum.ASURATOON.value, upload=upload, count=count)
         else:
             process_push_to_db(
-                mode='manga', source_site=MangaSourceEnum.ASURATOON.value, insert=True, upload=True, count=20)
+                mode='all', source_site=MangaSourceEnum.ASURATOON.value, insert=True, upload=True, count=20)

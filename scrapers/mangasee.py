@@ -272,7 +272,7 @@ class MangaseeCrawler(Crawler):
                                    source_site=MangaSourceEnum.MANGASEE.value, upload=upload, count=count)
         else:
             process_push_to_db(
-                mode='manga', source_site=MangaSourceEnum.MANGASEE.value, insert=True, upload=True, count=20)
+                mode='all', source_site=MangaSourceEnum.MANGASEE.value, insert=True, upload=True, count=20)
 
     def string_to_json(self, chapter_str):
         if not chapter_str.endswith('}'):
