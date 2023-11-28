@@ -169,6 +169,7 @@ class MangaseeCrawler(Crawler):
             manga_thumb = manga_soup.find(
                 'meta', {'property': 'og:image'})['content']
             regex = r'vm.Chapters\s=\s.{0,};'
+            logging.info(manga_soup)
             script = manga_soup.findAll('script')[-1].text
             list_chapters_str_regex = re.search(regex, script)
             bucket_manga = tx_manga_bucket_mapping.find_one(
@@ -179,7 +180,7 @@ class MangaseeCrawler(Crawler):
                 bucket = process_insert_bucket_mapping(
                     manga_slug, tx_manga_bucket_mapping)
             if list_chapters_str_regex is None:
-                print(f'{manga_url} error list_chapters_str_regex')
+                logging.info(f'{manga_url} error list_chapters_str_regex')
                 return None
             list_chapters_str = list_chapters_str_regex.group()
             a = list_chapters_str.replace(
