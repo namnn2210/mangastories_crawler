@@ -229,18 +229,20 @@ def manga_builder(manga_obj_dict):
     return manga_dict
 
 
-def new_chapter_builder(chapter_dict, manga_id):
+def new_chapter_builder(chapter_dict, manga_id, source_site):
     return {
         "name": 'S{} - Chapter {}'.format(chapter_dict['season'], chapter_dict['ordinal']),
         "slug": chapter_dict['slug'],
-        "original": chapter_dict['original'],
+        "original": source_site,
         "manga_id": manga_id,
         "ordinal": chapter_dict['ordinal'],
         'chapter_no': chapter_dict['chapter_number'],
         'chapter_part': chapter_dict['chapter_part'],
         'season': chapter_dict['season'],
         'chapter_code': chapter_dict['chapter_number'] + chapter_dict['chapter_part'] + chapter_dict['season'],
+        'original_id': chapter_dict['original'],
         'ordinal': chapter_dict['ordinal'],
+        'published': chapter_dict['date'],
         'resources': chapter_dict['resources'],
         'resource_storage': chapter_dict['resources_storage'],
         'resource_total': chapter_dict['pages'],
@@ -257,9 +259,13 @@ def new_chapter_builder(chapter_dict, manga_id):
 
 
 def chapter_builder(chapter_dict, manga_id):
-
+    if chapter_dict['season'] == '00':
+        name = 'Chapter {}'.format(chapter_dict['ordinal'])
+    else:
+        name = 'S{} - Chapter {}'.format(
+            chapter_dict['season'], chapter_dict['ordinal'])
     return {
-        "name": 'S{} - Chapter {}'.format(chapter_dict['season'], chapter_dict['ordinal']),
+        "name": name,
         "slug": chapter_dict['slug'],
         "original": chapter_dict['original'],
         "published": chapter_dict['date'],
@@ -379,6 +385,7 @@ def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_s
         except Exception as ex:
             db.rollback()
     else:
+        logging.info("Update chapter info")
         existed_chapter = chapter_query.first()
         processed_chapter_dict['idx'] = hashidx(existed_chapter.id)
         for key, value in processed_chapter_dict.items():
@@ -494,7 +501,7 @@ def new_process_push_to_db(mode='crawl', type='manga', list_update_original_id=N
                 chapters = manga['chapters']
                 for chapter in chapters:
                     chapter_dict = new_chapter_builder(
-                        chapter, existed_manga.id)
+                        chapter, existed_manga.id, source_site=MangaSourceEnum.ASURATOON.value)
                     new_push_chapter_to_db(
                         db, chapter_dict, bucket, existed_manga.id, existed_manga.slug, upload, tx_manga_errors)
                     # list_processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages': chapter['pages'], 'resources': chapter['resources'], 'resources_storage': chapter['resources_storage']})
