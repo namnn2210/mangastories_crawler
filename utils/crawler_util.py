@@ -230,8 +230,13 @@ def manga_builder(manga_obj_dict):
 
 
 def new_chapter_builder(chapter_dict, manga_id, source_site):
+    if chapter_dict['season'] == '00':
+        name = 'Chapter {}'.format(chapter_dict['ordinal'])
+    else:
+        name = 'S{} - Chapter {}'.format(
+            chapter_dict['season'], chapter_dict['ordinal'])
     return {
-        "name": 'S{} - Chapter {}'.format(chapter_dict['season'], chapter_dict['ordinal']),
+        "name": name,
         "slug": chapter_dict['slug'],
         "original": source_site,
         "manga_id": manga_id,
