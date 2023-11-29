@@ -129,7 +129,7 @@ class MangaseeCrawler(Crawler):
         manga_raw_info_dict = {}
         manga_raw_info_dict['alternative_name'] = ','.join(manga['al'])
         manga_raw_info_dict['author'] = ','.join(manga['a'])
-        manga_raw_info_dict['genre'] = ','.join(manga['g'])
+        manga_raw_info_dict['genre'] = ', '.join(manga['g'])
         manga_raw_info_dict['published'] = manga['y']
         manga_raw_info_dict['manga_type'] = manga['t']
         list_info = str(info_group).split("\n\n")

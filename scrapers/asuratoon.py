@@ -146,7 +146,7 @@ class AsuratoonCrawler(Crawler):
                     ' (Source: Mangamonster.net)'
             else:
                 final_dict['description'] = ''
-            final_dict['genre'] = ','.join(list_processed_genres)
+            final_dict['genre'] = ', '.join(list_processed_genres)
             for detail_dict in list_processed_detail:
                 key, value = next(iter(detail_dict.items()))
                 if key == 'author' and value == '-':
