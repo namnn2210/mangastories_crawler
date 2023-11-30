@@ -232,7 +232,7 @@ class AsuratoonCrawler(Crawler):
             'season': chapter_season,
             'pages': len(list_resources),
             'resources': list_resources,
-            'resources_storage': chapter_source,
+            'resources_storage': 'https://asuratoon.com',
             'resources_bucket': bucket,
             'date': datetime.now(tz=pytz.timezone('America/Chicago'))
         }
