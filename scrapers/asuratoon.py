@@ -29,7 +29,7 @@ class AsuratoonCrawlerFactory(CrawlerFactory):
 
 class AsuratoonCrawler(Crawler):
 
-    def crawl(self):
+    def crawl(self, original_ids=None):
         logging.info('Crawling all mangas from Asuratoon...')
         mongo_client = Connection().mongo_connect()
         mongo_db = mongo_client['mangamonster']
@@ -37,8 +37,16 @@ class AsuratoonCrawler(Crawler):
         tx_manga_errors = mongo_db['tx_manga_errors']
         tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
 
-        # Crawl multiple pages
-        list_manga_urls = self.get_all_manga_urls()
+        if original_ids is not None:
+            list_manga_urls = []
+            for item in original_ids:
+                query = {"original_id": item}
+                result = mongo_collection.find_one(query)
+                if result:
+                    list_manga_urls.append(result['original'])
+        else:
+            # Crawl multiple pages
+            list_manga_urls = self.get_all_manga_urls()
 
         logging.info('Total mangas: %s' % len(list_manga_urls))
 

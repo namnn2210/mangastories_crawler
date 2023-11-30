@@ -173,6 +173,8 @@ def new_manga_builder(manga_obj_dict):
         'description': manga_obj_dict['description'],
         'manga_authors': manga_obj_dict['author'],
         'manga_genres': manga_obj_dict['genre'],
+        'score': random.uniform(5, 10),
+        'num_scoring_users': random.randint(10000, 1000000),
         'total_view': 0,
         'created_by': 0,
         'updated_by': 0,
@@ -337,6 +339,8 @@ def new_push_manga_to_db(db, manga, tx_manga_bucket_mapping):
     existed_new_manga = query_new_manga.first()
     if existed_new_manga:
         del manga_dict['thumb']
+        del manga_dict['score']
+        del manga_dict['num_scoring_users']
         manga_dict['idx'] = hashidx(existed_new_manga.id)
         for key, value in manga_dict.items():
             if key != 'thumb' and key != 'created_at':
