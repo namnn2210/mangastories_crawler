@@ -341,6 +341,7 @@ def new_push_manga_to_db(db, manga, tx_manga_bucket_mapping):
         del manga_dict['thumb']
         del manga_dict['score']
         del manga_dict['num_scoring_users']
+        del manga_dict['status']
         manga_dict['idx'] = hashidx(existed_new_manga.id)
         for key, value in manga_dict.items():
             if key != 'thumb' and key != 'created_at':
@@ -510,7 +511,7 @@ def new_process_push_to_db(mode='crawl', type='manga', list_update_original_id=N
                 chapters = manga['chapters']
                 for chapter in chapters:
                     chapter_dict = new_chapter_builder(
-                        chapter, existed_manga.id, source_site=MangaSourceEnum.ASURATOON.value)
+                        chapter, existed_manga.id, source_site=source_site)
                     new_push_chapter_to_db(
                         db, chapter_dict, bucket, existed_manga.id, existed_manga.slug, upload, tx_manga_errors)
                     # list_processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages': chapter['pages'], 'resources': chapter['resources'], 'resources_storage': chapter['resources_storage']})
