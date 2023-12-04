@@ -4,10 +4,11 @@ import subprocess
 parent_folder_path = '/www-data/mangamonster.com/storage/app/public/images/manga/'
 
 # Get the current date in yyyy/mm/dd format
-current_date = datetime.datetime.now().strftime('%Y/%m/%d')
+today = datetime.datetime.now()
+today_str = '{}/{}/{}'.format(str(today.year), str(today.month), str(today.day))
 
 # Define the source and destination folders
-processing_folder = f'{parent_folder_path}{current_date}/'
+processing_folder = f'{parent_folder_path}{today_str}/'
 # destination_folder = f'{parent_folder_path}{current_date}'
 
 # Construct the rsync command
