@@ -106,7 +106,7 @@ class MangakakalotCrawler(Crawler):
                 alternative_name = ''
             
             # Description
-            manga_description = manga_soup.find('div',{'id':'noidungm'}).text
+            manga_description = " ".join(manga_soup.find('div',{'id':'noidungm'}).text.split())
             
             
             # Bucket
