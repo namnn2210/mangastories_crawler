@@ -1,5 +1,6 @@
 from enum import Enum, auto
 
+
 class MangaMonsterBucketEnum(Enum):
     MANGAMONSTER = 'mangamonster'
     MANGAMONSTER1 = 'mangamonster1'
@@ -21,15 +22,18 @@ class MangaMonsterBucketEnum(Enum):
     MANGAMONSTER29 = 'mangamonster29'
     MANGAMONSTER32 = 'mangamonster32'
     MANGAMONSTER33 = 'mangamonster33'
-    
+
+
 class MangaSourceEnum(Enum):
     MANGASEE = 'mangasee'
     MANHUAUS = 'manhuaus'
     ASURATOON = 'asuratoon'
     MANHUAPLUS = 'manhuaplus'
     MANGAREADER = 'mangareader'
-    
+    FLAMECOMICS = 'flamecomics'
+    MANGAKAKALOT = 'mangakakalot'
+
+
 class ErrorCategoryEnum(Enum):
     S3_UPLOAD = auto()
     MANGA_PROCESSING = auto()
-    
