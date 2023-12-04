@@ -118,15 +118,15 @@ class MangakakalotCrawler(Crawler):
                 
             # Author:
             author_li_text = list_info_li[1].text
-            author = author_li_text.replace('Author(s) :','').strip('\t')
+            author = " ".join(author_li_text.replace('Author(s) :','').split())
             
             # Status:
             status_li_text = list_info_li[2].text
-            status = status_li_text.replace('Status :','').strip('\t')
+            status = " ".join(status_li_text.replace('Status :','').split())
             
             # Status:
             genres_li_text = list_info_li[6].text
-            genres = genres_li_text.replace('Genres :','').strip('\t')
+            genres = " ".join(genres_li_text.replace('Genres :','').split())
             
             
             list_chapters = manga_soup.find('div',{'class':'chapter-list'}).find_all('div',{'class':'row'})
