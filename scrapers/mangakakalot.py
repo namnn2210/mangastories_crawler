@@ -36,11 +36,11 @@ class MangakakalotCrawler(Crawler):
         tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
         
         # Crawl multiple pages
-        # list_manga_urls = self.get_all_manga_urls()
+        list_manga_urls = self.get_all_manga_urls()
         
-        # logging.info('Total mangas: %s' % len(list_manga_urls))
+        logging.info('Total mangas: %s' % len(list_manga_urls))
         
-        list_manga_urls = ['https://ww7.mangakakalot.tv/manga/manga-we999613']
+        # list_manga_urls = ['https://ww7.mangakakalot.tv/manga/manga-we999613']
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors) for manga_url in list_manga_urls]
@@ -57,7 +57,7 @@ class MangakakalotCrawler(Crawler):
             base_url = f"https://ww7.mangakakalot.tv/manga_list/?type=topview&category=all&state=all&page={page}"
             list_starting_urls.append(base_url)
             page += 1
-        with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             futures = [executor.submit(self.process_get, starting_url) for starting_url in list_starting_urls]
         for future in futures:
             list_mangas = future.result()
