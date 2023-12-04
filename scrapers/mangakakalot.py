@@ -36,18 +36,17 @@ class MangakakalotCrawler(Crawler):
         tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
         
         # Crawl multiple pages
-        list_manga_urls = self.get_all_manga_urls()
+        # list_manga_urls = self.get_all_manga_urls()
         
-        logging.info('Total mangas: %s' % len(list_manga_urls))
+        # logging.info('Total mangas: %s' % len(list_manga_urls))
+        
+        list_manga_urls = ['https://ww7.mangakakalot.tv/manga/manga-we999613']
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors) for manga_url in list_manga_urls[:10]]
+            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors) for manga_url in list_manga_urls]
             
         for future in futures:
             future.result()
-            
-            
-            
             
     def get_all_manga_urls(self):
         page = 1
@@ -79,6 +78,132 @@ class MangakakalotCrawler(Crawler):
             manga_url = f'https://ww7.mangakakalot.tv{manga_href}'
             list_mangas.append(manga_url)
         return list_mangas
+    
+    def extract_manga_info(self,manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors):
+        try:
+            logging.info(manga_url)
+            manga_soup = get_soup(manga_url,headers)
+            manga_original_id = manga_url.split('/')[-1]
+            
+            # Manga info  
+            manga_info_top = manga_soup.find('div',{'class':'manga-info-top'})
+            
+            # Thumb
+            manga_thumb_href = manga_info_top.find('div',{'class':'manga-info-pic'}).find('img')['src']
+            manga_thumb = f'https://ww7.mangakakalot.tv{manga_thumb_href}'
+            
+            manga_info_text = manga_soup.find('ul',{'class':'manga-info-text'})
+            
+            list_info_li = manga_info_text.find_all('li')
+            
+            # Name
+            name_li = list_info_li[0]
+            manga_name = name_li.find('h1').text
+            alternative_name_div = name_li.find('h2', {'class':'story-alternative'})
+            if alternative_name_div:
+                alternative_name = alternative_name_div.text
+            else:
+                alternative_name = ''
+            
+            # Description
+            manga_description = manga_soup.find('div',{'id':'noidungm'}).text
+            
+            
+            # Bucket
+            manga_bucket = tx_manga_bucket_mapping.find_one({'original_id': manga_original_id})
+            if manga_bucket:
+                bucket = manga_bucket['bucket']
+            else:
+                bucket = process_insert_bucket_mapping(manga_original_id, tx_manga_bucket_mapping)
+                
+            # Author:
+            author_li_text = list_info_li[1].text
+            author = author_li_text.replace('Author(s) :','').strip('\t')
+            
+            # Status:
+            status_li_text = list_info_li[2].text
+            status = status_li_text.replace('Status :','').strip('\t')
+            
+            # Status:
+            genres_li_text = list_info_li[6].text
+            genres = genres_li_text.replace('Genres :','').strip('\t')
+            
+            
+            list_chapters = manga_soup.find('div',{'class':'chapter-list'}).find_all('div',{'class':'row'})
+            manga_count_chapters = len(list_chapters)
+            
+            list_chapters_info = []
+            for chapter in list_chapters:
+                    chapter_info_dict = self.extract_chapter_info(chapter=chapter, manga_slug=manga_original_id, bucket=bucket)
+                    list_chapters_info.append(chapter_info_dict)
+            final_dict = {
+                'name':manga_name,
+                'original':manga_url,
+                'original_id': manga_original_id,
+                'thumb':manga_thumb,
+                'genre':genres,
+                'manga_type':'Manga',
+                'manga_status':status,
+                'author':author,
+                'published':'',
+                'description':manga_description,
+                'genre':genres,
+                'count_chapters': manga_count_chapters, 
+                'chapters': list_chapters_info,
+                'alternative_name':alternative_name,
+                'source_site':MangaSourceEnum.MANGAKAKALOT.value
+            }
+            # for detail_dict in list_processed_details:
+            #     key, value = next(iter(detail_dict.items()))
+            #     final_dict[key] = value 
+            # Insert or Update 
+            filter_criteria = {"original_id": final_dict["original_id"]}
+            mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
+        except Exception as ex:
+            logging.info(str(ex))
+            tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
+    
+    def extract_chapter_info(self, chapter,manga_slug,bucket):
+        chapter_info_span = chapter.find_all('span')
+        chapter_href = chapter_info_span[0].find('a')['href'] 
+        chapter_url = 'https://ww7.mangakakalot.tv' + chapter_href
+
+        chapter_slug = manga_slug + '-' + chapter_href.split('/')[-1]
+        chapter_soup = get_soup(chapter_url,headers)
+        
+        chapter_ordinal =  chapter_href.split('/')[-1].replace('chapter-','')
+        chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
+        chapter_season = format_leading_part(0)
+        
+        reader_area = chapter_soup.find('div',{'class':'vung-doc'})
+        list_images = reader_area.find_all('img',{'class':'img-loading'})
+        list_resources = []
+        for image in list_images:
+            original_url = image['data-src']
+            regex_url = r'^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:\/\n\?\=]+)'
+            chapter_source_match = re.search(regex_url, original_url)
+            if chapter_source_match:
+                chapter_source = chapter_source_match.group(1)
+                img_url = original_url.replace(chapter_source_match.group(),'')
+            else:
+                img_url = original_url
+            list_resources.append(img_url)
+        chapter_info_dict = {
+            'ordinal':chapter_ordinal,
+            'chapter_number':chapter_number,
+            'chapter_part':chapter_part,
+            'slug':chapter_slug ,
+            'original':chapter_url,
+            'resource_status': 'ORIGINAL',
+            'season':chapter_season,
+            'pages':len(list_resources),
+            'resources': list_resources,
+            'resources_storage': chapter_source,
+            'resources_bucket': bucket,
+            'date':datetime.now(tz=pytz.timezone('America/Chicago'))
+        }
+        return chapter_info_dict
+    
     
     def update_chapter(self):
         return super().update_chapter()
