@@ -13,7 +13,7 @@ class NewManga(Base):
     idx = Column(String(36))
     mal_id = Column(String(36))
     name = Column(String(255))
-    alt_name = Column(String(255))
+    alt_name = Column(Text)
     slug = Column(String(255))
     thumb = Column(String(255))
     cover = Column(String(255))
