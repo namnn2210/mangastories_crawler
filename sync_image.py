@@ -13,10 +13,13 @@ processing_folder = f'{parent_folder_path}{today_str}/'
 
 # Construct the rsync command
 rsync_command = f'scp -P 3875  -r {processing_folder}/* bidgear@snapshot-99629717-centos-16gb-hil-1:{processing_folder}'
+chmod_command = f'ssh -p 3875 bidgear@snapshot-99629717-centos-16gb-hil-1 "chmod 775 {processing_folder}"'
 
 # Run the rsync command
 try:
     subprocess.run(rsync_command, shell=True, check=True)
     print('Rsync completed successfully!')
+    subprocess.run(chmod_command, shell=True, check=True)
+    print('Chmod completed successfully!')
 except subprocess.CalledProcessError as e:
     print(f'Error: {e}')
