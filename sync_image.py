@@ -11,7 +11,7 @@ today_str = '{}/{}/{}'.format(str(today.year), str(today.month), str(today.day))
 processing_folder = f'{parent_folder_path}{today_str}/'
 # destination_folder = f'{parent_folder_path}{current_date}'
 
-# Construct the rsync command
+# Construct the rsync commandcd py  ma
 rsync_command = f'scp -P 3875  -r {processing_folder}/* bidgear@snapshot-99629717-centos-16gb-hil-1:{processing_folder}'
 chmod_command = f'ssh -p 3875 bidgear@snapshot-99629717-centos-16gb-hil-1 "chmod 775 {processing_folder}"'
 

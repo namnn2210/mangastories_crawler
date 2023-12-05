@@ -1,7 +1,7 @@
 from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
-from utils.crawler_util import get_soup, parse_soup, process_insert_bucket_mapping, process_chapter_ordinal, format_leading_part, new_process_push_to_db
+from utils.crawler_util import get_soup, parse_soup, process_insert_bucket_mapping, process_chapter_ordinal, format_leading_part, new_process_push_to_db, process_push_to_db
 from connections.connection import Connection
 from configs.config import MAX_THREADS
 from datetime import datetime
@@ -211,5 +211,10 @@ class MangakakalotCrawler(Crawler):
     def update_manga(self):
         return super().update_manga()
     
-    def push_to_db(self, mode='manga', insert=True):
-        return super().push_to_db(mode, insert)
+    def push_to_db(self, mode='crawl', type='manga', list_update_original_id=None, upload=False, count=None, new=True):
+        if new:
+            new_process_push_to_db(mode=mode, type=type, list_update_original_id=list_update_original_id,
+                                   source_site=MangaSourceEnum.MANGAKAKALOT.value, upload=upload, count=count)
+        else:
+            process_push_to_db(
+                mode='all', source_site=MangaSourceEnum.MANGAKAKALOT.value, insert=True, upload=True, count=20)
