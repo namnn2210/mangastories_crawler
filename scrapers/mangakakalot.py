@@ -128,6 +128,13 @@ class MangakakalotCrawler(Crawler):
             genres_li_text = list_info_li[6].text
             genres = " ".join(genres_li_text.replace('Genres :','').split())
             
+            if 'Manhua' in genres:
+                manga_type = 'Manhua'
+            elif 'Manhwa' in genres:
+                manga_type = 'Manhua'
+            else:
+                manga_type = 'Manga'
+            
             
             list_chapters = manga_soup.find('div',{'class':'chapter-list'}).find_all('div',{'class':'row'})
             manga_count_chapters = len(list_chapters)
@@ -142,7 +149,7 @@ class MangakakalotCrawler(Crawler):
                 'original_id': manga_original_id,
                 'thumb':manga_thumb,
                 'genre':genres,
-                'manga_type':'Manga',
+                'manga_type':manga_type,
                 'manga_status':status,
                 'author':author,
                 'published':'',
