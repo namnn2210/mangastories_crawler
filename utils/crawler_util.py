@@ -20,6 +20,7 @@ import io
 import logging
 import math
 import random
+import slugify
 
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -130,7 +131,7 @@ def process_chapter_ordinal(chapter_ordinal):
     return chapter_number, chapter_part
 
 
-def new_manga_builder(manga_obj_dict):
+def new_manga_builder(manga_obj_dict, slug_format=False, publish=True):
     img = None
     try:
         img = Image.open(BytesIO(requests.get(
@@ -158,17 +159,27 @@ def new_manga_builder(manga_obj_dict):
         publish_status = 0
     else:
         publish_status = 1
+    
+    if slug_format:
+        slug = slugify(manga_obj_dict['name'])
+    else:
+        slug = manga_obj_dict['original_id'].lower()
+        
+    if publish:
+        status = 1
+    else:
+        status = 0
 
     manga_dict = {
         'name': manga_obj_dict['name'],
-        'slug': manga_obj_dict['original_id'].lower(),
+        'slug': slug,
         'alt_name': manga_obj_dict.get('alternative_name', ''),
         'original': manga_obj_dict['source_site'],
         'original_id': manga_obj_dict['original_id'],
         'thumb': thumb_path,
         'manga_type_id': manga_type,
         'publish_status': publish_status,
-        'status': 1,
+        'status': status,
         'published': manga_obj_dict['published'],
         'description': manga_obj_dict['description'],
         'manga_authors': manga_obj_dict['author'],
@@ -231,12 +242,16 @@ def manga_builder(manga_obj_dict):
     return manga_dict
 
 
-def new_chapter_builder(chapter_dict, manga_id, source_site):
+def new_chapter_builder(chapter_dict, manga_id, source_site, publish=True):
     if chapter_dict['season'] == '00':
         name = 'Chapter {}'.format(chapter_dict['ordinal'])
     else:
         name = 'S{} - Chapter {}'.format(
             chapter_dict['season'], chapter_dict['ordinal'])
+    if publish:
+        status = 1
+    else:
+        status = 0
     return {
         "name": name,
         "slug": chapter_dict['slug'],
@@ -255,7 +270,7 @@ def new_chapter_builder(chapter_dict, manga_id, source_site):
         'resource_total': chapter_dict['pages'],
         'resource_bucket': chapter_dict['resources_bucket'],
         "season": chapter_dict['season'],
-        'status': 1,
+        'status': status,
         'total_view': 0,
         'created_by': 0,
         'updated_by': 0,
@@ -331,8 +346,8 @@ def push_manga_to_db(db, manga):
         db.commit()
 
 
-def new_push_manga_to_db(db, manga, tx_manga_bucket_mapping):
-    manga_dict = new_manga_builder(manga)
+def new_push_manga_to_db(db, manga, tx_manga_bucket_mapping, slug_format=False, publish=True):
+    manga_dict = new_manga_builder(manga, slug_format,publish)
     manga_obj = NewManga(**manga_dict)
     query_new_manga = db.query(NewManga).where(
         NewManga.original_id == manga_dict['original_id'])
@@ -358,16 +373,13 @@ def new_push_manga_to_db(db, manga, tx_manga_bucket_mapping):
             new_manga = query_new_manga.first()
             if new_manga is not None:
                 idx = hashidx(new_manga.id)
-                update_value = {
-                    'idx': idx,
-                }
-                new_manga.update(update_value)
+                new_manga.idx = idx
                 db.commit()
         except Exception as ex:
             db.rollback
 
 
-def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_slug, upload=True, error=None):
+def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_slug, upload=True, error=None, publish=True):
     s3 = Connection().s3_connect()
     # chapter_dict = processed_chapter_dict
     manga_chapter_obj = NewMangaChapters(**processed_chapter_dict)
@@ -387,10 +399,8 @@ def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_s
             new_manga_chapter = chapter_query.first()
             if new_manga_chapter is not None:
                 idx = hashidx(new_manga_chapter.id)
-                update_value = {
-                    'idx': idx,
-                }
-                new_manga_chapter.update(update_value)
+                new_manga_chapter.idx = idx
+                # new_manga_chapter.update(update_value)
                 db.commit()
         except Exception as ex:
             db.rollback()
@@ -479,7 +489,7 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
                 index += 1
 
 
-def new_process_push_to_db(mode='crawl', type='manga', list_update_original_id=None, source_site=MangaSourceEnum.MANGASEE.value, upload=True, count=None):
+def new_process_push_to_db(mode='crawl', type='manga', list_update_original_id=None, source_site=MangaSourceEnum.MANGASEE.value, upload=True, count=None, slug_format=False, publish=True):
     db = Connection().mysql_connect()
     mongo_client = Connection().mongo_connect()
     mongo_db = mongo_client['mangamonster']
@@ -500,7 +510,7 @@ def new_process_push_to_db(mode='crawl', type='manga', list_update_original_id=N
         if type == 'manga' or type == 'all':
             logging.info('Inserting or update manga: %s' %
                          manga['original_id'])
-            new_push_manga_to_db(db, manga, tx_manga_bucket_mapping)
+            new_push_manga_to_db(db, manga, tx_manga_bucket_mapping, slug_format, publish)
             logging.info('Manga inserted or updated')
         if type == 'chapter' or type == 'all':
             existed_manga = db.query(NewManga).where(
@@ -513,7 +523,7 @@ def new_process_push_to_db(mode='crawl', type='manga', list_update_original_id=N
                     chapter_dict = new_chapter_builder(
                         chapter, existed_manga.id, source_site=source_site)
                     new_push_chapter_to_db(
-                        db, chapter_dict, bucket, existed_manga.id, existed_manga.slug, upload, tx_manga_errors)
+                        db, chapter_dict, bucket, existed_manga.id, existed_manga.slug, upload, tx_manga_errors, publish)
                     # list_processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages': chapter['pages'], 'resources': chapter['resources'], 'resources_storage': chapter['resources_storage']})
 
 
