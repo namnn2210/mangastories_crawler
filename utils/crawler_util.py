@@ -519,7 +519,7 @@ def new_process_push_to_db(mode='crawl', type='manga', list_update_original_id=N
             logging.info('Manga inserted or updated')
         if type == 'chapter' or type == 'all':
             existed_manga = db.query(NewManga).where(
-                NewManga.original_id == manga['original_id']).where(NewManga.status == 1).first()
+                NewManga.original_id == manga['original_id']).first()
             if existed_manga is not None:
                 bucket = tx_manga_bucket_mapping.find_one({'$or': [{"original_id": existed_manga.original_id}, {
                                                           "original_id": existed_manga.original_id.lower()}]})['bucket']
