@@ -40,6 +40,7 @@ class NewManga(Base):
     manga_genres = Column(String(255))
     manga_type_id = Column(BIGINT, default=1)
     meta_tag_id = Column(BIGINT)
+    search_content = Column(Text)
     created_by = Column(BIGINT, default=1)
     updated_by = Column(BIGINT, default=1)
     deleted_by = Column(BIGINT)

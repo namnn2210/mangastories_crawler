@@ -21,6 +21,7 @@ import logging
 import math
 import random
 import slugify
+import re
 
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -169,6 +170,9 @@ def new_manga_builder(manga_obj_dict, slug_format=False, publish=True):
         status = 1
     else:
         status = 0
+        
+    search_content = re.sub('[^a-zA-Z0-9]', ' ', manga_obj_dict['name']) + manga_obj_dict.get('alternative_name', '') + manga_obj_dict['author'] + manga_obj_dict['genre'] + manga_obj_dict.get('manga_type','manga').lower()
+
 
     manga_dict = {
         'name': manga_obj_dict['name'],
@@ -186,6 +190,7 @@ def new_manga_builder(manga_obj_dict, slug_format=False, publish=True):
         'manga_genres': manga_obj_dict['genre'],
         'score': random.uniform(5, 10),
         'num_scoring_users': random.randint(10000, 1000000),
+        'search_content':search_content,
         'total_view': 0,
         'created_by': 0,
         'updated_by': 0,
