@@ -11,6 +11,7 @@ from models.entities import Manga, MangaChapters, MangaChapterResources
 from models.new_entities import NewManga, NewMangaChapters
 from scrapers.base.enums import MangaSourceEnum, ErrorCategoryEnum, MangaMonsterBucketEnum
 from connections.connection import Connection
+from slugify import slugify
 
 import pytz
 import os
@@ -20,7 +21,6 @@ import io
 import logging
 import math
 import random
-import slugify
 import re
 
 
