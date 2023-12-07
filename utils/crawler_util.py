@@ -407,6 +407,15 @@ def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_s
                 new_manga_chapter.idx = idx
                 # new_manga_chapter.update(update_value)
                 db.commit()
+                
+                
+            # Update last update
+                
+            manga_query = db.query(NewManga).filter(NewManga.id == manga_id).first()
+            if manga_query:
+                manga_query.latest_chapter_published = manga_chapter_obj.created_at
+                db.commit()
+                
         except Exception as ex:
             db.rollback()
     else:
