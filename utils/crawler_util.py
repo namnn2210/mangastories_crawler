@@ -275,7 +275,6 @@ def new_chapter_builder(chapter_dict, manga_id, source_site, publish=True):
         'resource_storage': chapter_dict['resources_storage'],
         'resource_total': chapter_dict['pages'],
         'resource_bucket': chapter_dict['resources_bucket'],
-        "season": chapter_dict['season'],
         'status': status,
         'total_view': 0,
         'created_by': 0,
@@ -444,9 +443,31 @@ def new_push_chapter_to_db_bulk(db, list_chapter_dict, bucket, manga_id, manga_s
     # s3 = Connection().s3_connect()
     logging.info('Inserting %s chapters with manga_id %s ' %(len(list_chapter_dict), manga_id))
     stmt = insert(NewMangaChapters).values(list_chapter_dict)
-    do_update_stmt = stmt.on_conflict_do_update(
-        index_elements=['manga_id','chapter_code'],  # column(s) to use for determining a conflict
-        set_={c.key: c for c in stmt.excluded}  # `stmt.excluded` represents excluded (new) rows
+    do_update_stmt = stmt.on_duplicate_key_update({
+        "name": stmt.inserted.name,
+        "slug": stmt.inserted.slug,
+        "original": stmt.inserted.original,
+        "manga_id": stmt.inserted.manga_id,
+        "ordinal": stmt.inserted.ordinal,
+        'chapter_no': stmt.inserted.chapter_no,
+        'chapter_part': stmt.inserted.chapter_part,
+        'season': stmt.inserted.season,
+        'chapter_code': stmt.inserted.chapter_code,
+        'original_id': stmt.inserted.original_id,
+        'ordinal': stmt.inserted.ordinal,
+        'published': stmt.inserted.published,
+        'resources': stmt.inserted.resources,
+        'resource_storage': stmt.inserted.resource_storage,
+        'resource_total': stmt.inserted.resource_total,
+        'resource_bucket': stmt.inserted.resource_bucket,
+        'status': stmt.inserted.status,
+        'total_view': stmt.inserted.total_view,
+        'created_by': stmt.inserted.created_by,
+        'updated_by': stmt.inserted.updated_by,
+        'deleted_by': stmt.inserted.deleted_by,
+        'created_at': stmt.inserted.created_at,
+        'updated_at': stmt.inserted.updated_at,
+    }
     )
     db.execute(do_update_stmt)
     db.commit()
