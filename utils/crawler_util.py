@@ -12,6 +12,7 @@ from models.new_entities import NewManga, NewMangaChapters
 from scrapers.base.enums import MangaSourceEnum, ErrorCategoryEnum, MangaMonsterBucketEnum
 from connections.connection import Connection
 from slugify import slugify
+from sqlalchemy.dialects.mysql import insert
 
 import pytz
 import os
@@ -384,7 +385,7 @@ def new_push_manga_to_db(db, manga, tx_manga_bucket_mapping, slug_format=False, 
             db.rollback
 
 
-def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_slug, upload=True, error=None, publish=True):
+def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_slug, upload=True, error=None):
     s3 = Connection().s3_connect()
     # chapter_dict = processed_chapter_dict
     manga_chapter_obj = NewMangaChapters(**processed_chapter_dict)
@@ -439,6 +440,16 @@ def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_s
                 error.insert_one({'type': ErrorCategoryEnum.S3_UPLOAD, 'date': datetime.now(
                 ), 'description': str(ex), 'data': original + '=>' + s3_path})
 
+def new_push_chapter_to_db_bulk(db, list_chapter_dict, bucket, manga_id, manga_slug, upload=True, error=None):
+    # s3 = Connection().s3_connect()
+    logging.info('Inserting %s chapters with manga_id %s ' %(len(list_chapter_dict), manga_id))
+    stmt = insert(NewMangaChapters).values(list_chapter_dict)
+    do_update_stmt = stmt.on_conflict_do_update(
+        index_elements=['manga_id','chapter_code'],  # column(s) to use for determining a conflict
+        set_={c.key: c for c in stmt.excluded}  # `stmt.excluded` represents excluded (new) rows
+    )
+    db.execute(do_update_stmt)
+    db.commit()
 
 def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True, upload=True, error=None):
     s3 = Connection().s3_connect()
@@ -494,7 +505,7 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
                 index += 1
 
 
-def new_process_push_to_db(mode='crawl', type='manga', list_update_original_id=None, source_site=MangaSourceEnum.MANGASEE.value, upload=True, count=None, slug_format=False, publish=True):
+def new_process_push_to_db(mode='crawl', type='manga', list_update_original_id=None, source_site=MangaSourceEnum.MANGASEE.value, upload=True, count=None, slug_format=False, publish=True, bulk=False):
     db = Connection().mysql_connect()
     mongo_client = Connection().mongo_connect()
     mongo_db = mongo_client['mangamonster']
@@ -524,12 +535,20 @@ def new_process_push_to_db(mode='crawl', type='manga', list_update_original_id=N
                 bucket = tx_manga_bucket_mapping.find_one({'$or': [{"original_id": existed_manga.original_id}, {
                                                           "original_id": existed_manga.original_id.lower()}]})['bucket']
                 chapters = manga['chapters']
-                for chapter in chapters:
-                    chapter_dict = new_chapter_builder(
-                        chapter, existed_manga.id, source_site=source_site)
-                    new_push_chapter_to_db(
-                        db, chapter_dict, bucket, existed_manga.id, existed_manga.slug, upload, tx_manga_errors, publish)
-                    # list_processed_chapter_dict.append({'chapter_dict': chapter_dict, 'pages': chapter['pages'], 'resources': chapter['resources'], 'resources_storage': chapter['resources_storage']})
+                if not bulk:
+                    for chapter in chapters:
+                        chapter_dict = new_chapter_builder(
+                            chapter, existed_manga.id, source_site=source_site, publish=publish)
+                        new_push_chapter_to_db(
+                            db, chapter_dict, bucket, existed_manga.id, existed_manga.slug, upload, tx_manga_errors)
+                else:
+                    list_chapter_dict = []
+                    for chapter in chapters:
+                        chapter_dict = new_chapter_builder(
+                            chapter, existed_manga.id, source_site=source_site, publish=publish)
+                        list_chapter_dict.append(chapter_dict)
+                    new_push_chapter_to_db_bulk(db, list_chapter_dict, bucket, existed_manga.id, existed_manga.slug, upload, tx_manga_errors)
+                        
 
 
 def process_push_to_db(mode='manga', source_site=MangaSourceEnum.MANGASEE.value, insert=True, upload=True, count=None):
