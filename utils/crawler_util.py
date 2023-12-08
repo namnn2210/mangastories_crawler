@@ -222,6 +222,7 @@ def manga_builder(manga_obj_dict, slug_format=False, publish=True):
         manga_type = 3
     else:
         manga_type = 1
+    logging.info('==================== slug_format %s' % slug_format)
     if slug_format:
         slug = slugify(manga_obj_dict['name'])
     else:
