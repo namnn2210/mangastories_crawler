@@ -1,5 +1,4 @@
 from scrapers.mangasee import MangaseeCrawlerFactory
 
 if __name__ == "__main__":
-    mangasee = MangaseeCrawlerFactory().create_crawler()
-    mangasee.update_chapter()
+    mangakakalot = MangaseeCrawlerFactory().create_crawler().push_to_db(type='chapter',slug_format=False,publish=True, count=2, new=False)
