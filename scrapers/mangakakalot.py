@@ -224,4 +224,5 @@ class MangakakalotCrawler(Crawler):
                                    source_site=MangaSourceEnum.MANGAKAKALOT.value, upload=upload, count=count, slug_format=slug_format, publish=publish, bulk=bulk)
         else:
             process_push_to_db(
-                mode='all', source_site=MangaSourceEnum.MANGAKAKALOT.value, insert=True, upload=True, count=20)
+                mode=mode, type=type, list_update_original_id=list_update_original_id,
+                                   source_site=MangaSourceEnum.MANGAKAKALOT.value, upload=upload, count=count)

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, DateTime, SMALLINT, Text, BIGINT, Float, Double
+from sqlalchemy import Column, Integer, String, DateTime, SMALLINT, Text, BIGINT, Float, Double, JSON
 from sqlalchemy.dialects.mysql import LONGTEXT
 from datetime import datetime
 
@@ -72,6 +72,8 @@ class MangaChapters(Base):
     total_view = Column(Integer)
     new_slug = Column(String(255))
     chapter_source = Column(String(255))
+    resources = Column(JSON)
+    resources_s3 = Column(JSON)
 
 
 class MangaSource(Base):

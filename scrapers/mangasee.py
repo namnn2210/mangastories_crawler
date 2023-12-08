@@ -72,7 +72,7 @@ class MangaseeCrawler(Crawler):
             future.result()
             break
 
-    def update_chapter(self):
+    def update_chapter(self, new=True):
         logging.info('Updating new chapters...')
 
         manga_url = 'https://mangasee123.com/'
@@ -100,7 +100,7 @@ class MangaseeCrawler(Crawler):
         self.crawl(original_ids=list(list_update_original_id))
         # Update to DB
         self.push_to_db(mode='update', type='chapter', list_update_original_id=list(
-            list_update_original_id), upload=False)
+            list_update_original_id), upload=False, new=new)
 
     def update_manga(self):
         logging.info('Updating new mangas...')
@@ -274,7 +274,8 @@ class MangaseeCrawler(Crawler):
                                    source_site=MangaSourceEnum.MANGASEE.value, upload=upload, count=count)
         else:
             process_push_to_db(
-                mode='all', source_site=MangaSourceEnum.MANGASEE.value, insert=True, upload=True, count=20)
+                mode=mode, type=type, list_update_original_id=list_update_original_id,
+                                   source_site=MangaSourceEnum.MANGASEE.value, upload=upload, count=count)
 
     def string_to_json(self, chapter_str):
         if not chapter_str.endswith('}'):
