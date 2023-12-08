@@ -329,6 +329,7 @@ def resource_builder(index, original, s3_path, chapter_id, bucket):
 
 def push_manga_to_db(db, manga):
     manga_dict = manga_builder(manga)
+    logging.info('=================== %s' % manga_dict)
     manga_obj = Manga(**manga_dict)
     query_new_manga = db.query(Manga).where(
         Manga.slug == manga_dict['slug'])
