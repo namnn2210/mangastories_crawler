@@ -204,6 +204,7 @@ def new_manga_builder(manga_obj_dict, slug_format=False, publish=True):
 
 
 def manga_builder(manga_obj_dict):
+    logging.info('go to builder')
     img = Image.open(BytesIO(requests.get(manga_obj_dict['thumb']).content))
     today = datetime.now()
     today_str = '{}/{}/{}'.format(str(today.year),
@@ -619,6 +620,7 @@ def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None,
             if existed_manga_query.first() is None:
                 logging.info('Inserting manga: %s' % manga['original_id'])
                 push_manga_to_db(db, manga)
+                
                 process_insert_bucket_mapping(
                     manga['original_id'], tx_manga_bucket_mapping)
                 logging.info('Manga inserted')
