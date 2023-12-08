@@ -203,7 +203,7 @@ def new_manga_builder(manga_obj_dict, slug_format=False, publish=True):
     return manga_dict
 
 
-def manga_builder(manga_obj_dict):
+def manga_builder(manga_obj_dict, slug_format=False, publish=True):
     logging.info('go to builder')
     img = Image.open(BytesIO(requests.get(manga_obj_dict['thumb']).content))
     today = datetime.now()
@@ -222,13 +222,21 @@ def manga_builder(manga_obj_dict):
         manga_type = 3
     else:
         manga_type = 1
+    if slug_format:
+        slug = slugify(manga_obj_dict['name'])
+    else:
+        slug = manga_obj_dict['original_id'].lower()
+    if publish:
+        status = 1
+    else:
+        status = 0
     manga_dict = {
         'name': manga_obj_dict['name'],
-        'slug': manga_obj_dict['original_id'].lower(),
+        'slug': slug,
         'original': manga_obj_dict['original'],
         'thumb': thumb_path,
         'manga_type_id': manga_type,
-        'status': 1,
+        'status': status,
         'description': manga_obj_dict['description'],
         'author': manga_obj_dict['author'],
         'genre': manga_obj_dict['genre'],
@@ -286,13 +294,16 @@ def new_chapter_builder(chapter_dict, manga_id, source_site, publish=True):
     }
 
 
-def chapter_builder(chapter_dict, manga_id):
+def chapter_builder(chapter_dict, manga_id, publish=True):
     if chapter_dict['season'] == '00':
         name = 'Chapter {}'.format(chapter_dict['ordinal'])
     else:
         name = 'S{} - Chapter {}'.format(
             chapter_dict['season'], chapter_dict['ordinal'])
-    
+    if publish:
+        status = 1
+    else:
+        status = 0
     return {
         "name": name,
         "slug": chapter_dict['slug'],
@@ -302,7 +313,7 @@ def chapter_builder(chapter_dict, manga_id):
         "ordinal": chapter_dict['ordinal'],
         'resource_status': chapter_dict['resource_status'],
         "season": chapter_dict['season'],
-        'status': 1,
+        'status': status,
         'total_view': 0,
         'created_by': 0,
         'updated_by': 0,
@@ -328,8 +339,8 @@ def resource_builder(index, original, s3_path, chapter_id, bucket):
     }
 
 
-def push_manga_to_db(db, manga):
-    manga_dict = manga_builder(manga)
+def push_manga_to_db(db, manga, slug_format=False, publish=True):
+    manga_dict = manga_builder(manga,slug_format,publish)
     logging.info('=================== %s' % manga_dict)
     manga_obj = Manga(**manga_dict)
     query_new_manga = db.query(Manga).where(
@@ -619,7 +630,7 @@ def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None,
         if type == 'manga' or type == 'all':
             if existed_manga_query.first() is None:
                 logging.info('Inserting manga: %s' % manga['original_id'])
-                push_manga_to_db(db, manga)
+                push_manga_to_db(db, manga,)
                 
                 process_insert_bucket_mapping(
                     manga['original_id'], tx_manga_bucket_mapping)
@@ -639,7 +650,7 @@ def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None,
                         MangaChapters.ordinal == chapter['ordinal']).where(MangaChapters.season == chapter['season']).where(MangaChapters.status == 1).first()
                     if db_manga_chapter is None:
                         chapter_dict = chapter_builder(
-                            chapter, existed_manga.id)
+                            chapter, existed_manga.id, publish=publish)
                         s3_prefix = 'storage/' + existed_manga.slug_original.lower() + '/' + \
                             chapter['season'] + '/' + chapter['chapter_number'] + \
                             '/' + chapter['chapter_part']
