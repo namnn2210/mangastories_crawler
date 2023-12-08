@@ -607,7 +607,7 @@ def new_process_push_to_db(mode='crawl', type='manga', list_update_original_id=N
                         
 
 
-def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None, source_site=MangaSourceEnum.MANGASEE.value, upload=True, count=None, slug_format=False, publish=True, bulk=False):
+def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None, source_site=MangaSourceEnum.MANGASEE.value, upload=True, count=None, slug_format=True, publish=True, bulk=False):
     # Connect DB
     db = Connection().mysql_connect(db_name='mangamonster_com')
     mongo_client = Connection().mongo_connect()
