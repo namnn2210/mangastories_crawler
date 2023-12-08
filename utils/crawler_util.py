@@ -627,7 +627,7 @@ def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None,
     for manga in list_mangas:
         # Check if manga in DB:
         existed_manga_query = db.query(Manga).where(
-            Manga.slug == manga['original_id'].lower()).where(Manga.status == 1)
+            Manga.slug_original == manga['original_id'].lower()).where(Manga.status == 1)
         if type == 'manga' or type == 'all':
             if existed_manga_query.first() is None:
                 logging.info('Inserting manga: %s' % manga['original_id'])
