@@ -631,6 +631,8 @@ def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None,
         if type == 'manga' or type == 'all':
             if existed_manga_query.first() is None:
                 logging.info('Inserting manga: %s' % manga['original_id'])
+                
+                logging.info('slug format prepare %s' % slug_format)
                 push_manga_to_db(db, manga, slug_format, publish)
                 
                 process_insert_bucket_mapping(
