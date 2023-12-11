@@ -115,8 +115,9 @@ def watermark_with_transparency_io(io_img, watermark_image_path):
 
 
 def image_s3_upload(s3, s3_path, original_path, bucket):
-    img = watermark_with_transparency_io(
-        BytesIO(requests.get(original_path).content), 'watermark/new_watermark.png')
+    # img = watermark_with_transparency_io(
+    #     BytesIO(requests.get(original_path).content), 'watermark/new_watermark.png')
+    img = BytesIO(requests.get(original_path).content)
     logging.info(s3_path)
     s3.put_object(Bucket=bucket, Key=s3_path, Body=img,
                   ACL='public-read', ContentType='image/webp')
