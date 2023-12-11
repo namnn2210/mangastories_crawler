@@ -100,7 +100,7 @@ class MangaseeCrawler(Crawler):
         self.crawl(original_ids=list(list_update_original_id)[:10])
         # Update to DB
         self.push_to_db(mode='update', type='chapter', list_update_original_id=list(
-            list_update_original_id), upload=True, new=new)
+            list_update_original_id)[:10], upload=True, new=new)
 
     def update_manga(self):
         logging.info('Updating new mangas...')
