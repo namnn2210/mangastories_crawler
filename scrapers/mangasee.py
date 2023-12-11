@@ -97,7 +97,7 @@ class MangaseeCrawler(Crawler):
             [item['IndexName'] for item in list_update_json])
         # Crawl update
         logging.info('%s update found' % len(list_update_original_id))
-        self.crawl(original_ids=list(list_update_original_id))
+        self.crawl(original_ids=list(list_update_original_id)[:10])
         # Update to DB
         self.push_to_db(mode='update', type='chapter', list_update_original_id=list(
             list_update_original_id), upload=False, new=new)
@@ -275,7 +275,7 @@ class MangaseeCrawler(Crawler):
         else:
             process_push_to_db(
                 mode=mode, type=type, list_update_original_id=list_update_original_id,
-                                   source_site=MangaSourceEnum.MANGASEE.value, upload=upload, slug_format=slug_format, publish=publish, count=count)
+                                   source_site=MangaSourceEnum.MANGASEE.value,insert=True, upload=upload, slug_format=slug_format, publish=publish, count=count)
 
     def string_to_json(self, chapter_str):
         if not chapter_str.endswith('}'):
