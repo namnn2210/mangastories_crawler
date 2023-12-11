@@ -503,29 +503,6 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
     resources = []
     resources_s3 = []
 
-    if insert:
-        logging.info('INSERT MODE')
-        index = 0
-        while index < processed_chapter_dict['pages']:
-            original = 'https://' + \
-                       processed_chapter_dict['resources_storage'] + \
-                       processed_chapter_dict['resources'][index]
-            img_count = index + 1
-            s3_path = processed_chapter_dict['s3_prefix'] + \
-                      '/' + format_leading_img_count(img_count) + '.webp'
-            s3_url = f'https://{bucket}.ams3.digitaloceanspaces.com/{s3_path}'
-            resources.append(original)
-            resources_s3.append(s3_url)
-            if upload:
-                try:
-                    image_s3_upload(
-                        s3=s3, s3_path=s3_path, original_path=original, bucket=bucket)
-                except Exception as ex:
-                    error.insert_one({'type': ErrorCategoryEnum.S3_UPLOAD, 'date': datetime.now(
-                    ), 'description': str(ex), 'data': original + '=>' + s3_path})
-            index += 1
-    manga_chapter_obj.resources = resources
-    manga_chapter_obj.resources_s3 = resources_s3
     chapter_query = db.query(MangaChapters).filter(MangaChapters.manga_id == manga_id,
                                                    MangaChapters.slug == manga_chapter_obj.slug,
                                                    MangaChapters.season == manga_chapter_obj.season)
@@ -533,6 +510,29 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
     chapter_count = chapter_query.count()
     if chapter_count == 0:
         try:
+            if insert:
+                logging.info('INSERT MODE')
+                index = 0
+                while index < processed_chapter_dict['pages']:
+                    original = 'https://' + \
+                               processed_chapter_dict['resources_storage'] + \
+                               processed_chapter_dict['resources'][index]
+                    img_count = index + 1
+                    s3_path = processed_chapter_dict['s3_prefix'] + \
+                              '/' + format_leading_img_count(img_count) + '.webp'
+                    s3_url = f'https://{bucket}.ams3.digitaloceanspaces.com/{s3_path}'
+                    resources.append(original)
+                    resources_s3.append(s3_url)
+                    if upload:
+                        try:
+                            image_s3_upload(
+                                s3=s3, s3_path=s3_path, original_path=original, bucket=bucket)
+                        except Exception as ex:
+                            error.insert_one({'type': ErrorCategoryEnum.S3_UPLOAD, 'date': datetime.now(
+                            ), 'description': str(ex), 'data': original + '=>' + s3_path})
+                    index += 1
+            manga_chapter_obj.resources = resources
+            manga_chapter_obj.resources_s3 = resources_s3
             db.add(manga_chapter_obj)
             db.commit()
         except Exception as ex:
@@ -543,8 +543,19 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
         for key, value in chapter_dict.items():
             if key != 'created_at':
                 setattr(existed_chapter, key, value)
+        index = 0
+        while index < processed_chapter_dict['pages']:
+            original = 'https://' + \
+                       processed_chapter_dict['resources_storage'] + \
+                       processed_chapter_dict['resources'][index]
+            img_count = index + 1
+            s3_path = processed_chapter_dict['s3_prefix'] + \
+                      '/' + format_leading_img_count(img_count) + '.webp'
+            # s3_url = f'https://{bucket}.ams3.digitaloceanspaces.com/{s3_path}'
+            resources.append(original)
+            # resources_s3.append(s3_url)
         existed_chapter.resources = resources
-        existed_chapter.resources_s3 = resources_s3
+        # existed_chapter.resources_s3 = resources_s3
 
         logging.info('%s => %s ' % (existed_chapter.resource_status, chapter_dict['resource_status']))
         db.commit()
