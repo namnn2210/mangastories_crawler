@@ -556,6 +556,7 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
             print(original)
             resources.append(original)
             # resources_s3.append(s3_url)
+            index += 1
         existed_chapter.resources = resources
         # existed_chapter.resources_s3 = resources_s3
 
