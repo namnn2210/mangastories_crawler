@@ -569,7 +569,7 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
     # Update last update         
     manga_query = db.query(Manga).filter(Manga.id == manga_id).first()
     if manga_query:
-        manga_query.latest_chapter_published = manga_chapter_obj.created_at
+        manga_query.updated_at = manga_chapter_obj.created_at
         db.commit()
 
 

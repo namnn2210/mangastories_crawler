@@ -5,7 +5,11 @@ class Crawler(ABC):
     @abstractmethod
     def crawl(self, original_id=None):
         pass
-    
+
+    @abstractmethod
+    def crawl_chapter(self):
+        pass
+
     @abstractmethod
     def update_chapter(self):
         pass

@@ -72,6 +72,24 @@ class MangaseeCrawler(Crawler):
             future.result()
             break
 
+    def crawl_chapter(self, list_hot_update):
+        mongo_client = Connection().mongo_connect()
+        mongo_db = mongo_client['mangamonster']
+        tx_manga_errors = mongo_db['tx_manga_errors']
+        tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
+        for chapter in list_hot_update:
+            bucket_manga = tx_manga_bucket_mapping.find_one(
+                {'original_id': chapter['IndexName']})
+            chapter_encoded = self.chapter_encode(
+                chapter['Chapter'])
+            chapter_url = 'https://mangasee123.com/read-online/{}{}.html'.format(
+                chapter['IndexName'], chapter_encoded)
+            chapter_source, chapter_info, index_name = self.get_chapter_info(
+                chapter_url)
+            chapter_info_dict = self.extract_chapter_info(
+                chapter_source, chapter_info, chapter_url, chapter['IndexName'], bucket_manga)
+
+
     def update_chapter(self, new=True):
         logging.info('Updating new chapters...')
 
@@ -215,7 +233,6 @@ class MangaseeCrawler(Crawler):
 
             # Extract manga info
             manga_raw_info_dict = self.extract_manga_info(manga, manga_soup)
-            logging.info('============%s' % manga_raw_info_dict)
             final_dict.update(manga_raw_info_dict)
 
             # Insert or Update
