@@ -657,31 +657,35 @@ def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None,
         if type == 'chapter' or type == 'all':
             logging.info('Inserting manga chapters for manga: %s' %
                          manga['original_id'])
-            existed_manga = existed_manga_query.first()
-            logging.info(existed_manga.slug)
-            bucket = tx_manga_bucket_mapping.find_one({'$or': [{"original_id": existed_manga.slug_original}, {
-                "original_id": existed_manga.slug_original.lower()}]})['bucket']
-            logging.info(bucket)
-            if existed_manga is not None:
-                chapters = manga['chapters']
-                list_processed_chapter_dict = []
-                for chapter in chapters:
-                    # db_manga_chapter = db.query(MangaChapters).where(MangaChapters.manga_id == existed_manga.id).where(
-                    #     MangaChapters.ordinal == chapter['ordinal']).where(MangaChapters.season == chapter['season']).where(MangaChapters.status == 1).first()
-                    # if db_manga_chapter is None:
-                    chapter_dict = chapter_builder(
-                        chapter, existed_manga.id, publish=publish)
-                    s3_prefix = 'storage/' + existed_manga.slug_original.lower() + '/' + \
-                                chapter['season'] + '/' + chapter['chapter_number'] + \
-                                '/' + chapter['chapter_part']
-                    list_processed_chapter_dict.append(
-                        {'chapter_dict': chapter_dict, 'pages': chapter['pages'], 'resources': chapter[
-                            'resources'], 'resources_storage': chapter['resources_storage'], 's3_prefix': s3_prefix})
-                logging.info('push chapter to db')
-                # Insert to database
-                for processed_chapter_dict in list_processed_chapter_dict:
-                    push_chapter_to_db(db, processed_chapter_dict, bucket, existed_manga.id,
-                                       insert=insert, upload=upload, error=tx_manga_errors)
+
+            try:
+                existed_manga = existed_manga_query.first()
+                logging.info(existed_manga.slug)
+                bucket = tx_manga_bucket_mapping.find_one({'$or': [{"original_id": existed_manga.slug_original}, {
+                    "original_id": existed_manga.slug_original.lower()}]})['bucket']
+                logging.info(bucket)
+                if existed_manga is not None:
+                    chapters = manga['chapters']
+                    list_processed_chapter_dict = []
+                    for chapter in chapters:
+                        # db_manga_chapter = db.query(MangaChapters).where(MangaChapters.manga_id == existed_manga.id).where(
+                        #     MangaChapters.ordinal == chapter['ordinal']).where(MangaChapters.season == chapter['season']).where(MangaChapters.status == 1).first()
+                        # if db_manga_chapter is None:
+                        chapter_dict = chapter_builder(
+                            chapter, existed_manga.id, publish=publish)
+                        s3_prefix = 'storage/' + existed_manga.slug_original.lower() + '/' + \
+                                    chapter['season'] + '/' + chapter['chapter_number'] + \
+                                    '/' + chapter['chapter_part']
+                        list_processed_chapter_dict.append(
+                            {'chapter_dict': chapter_dict, 'pages': chapter['pages'], 'resources': chapter[
+                                'resources'], 'resources_storage': chapter['resources_storage'], 's3_prefix': s3_prefix})
+                    logging.info('push chapter to db')
+                    # Insert to database
+                    for processed_chapter_dict in list_processed_chapter_dict:
+                        push_chapter_to_db(db, processed_chapter_dict, bucket, existed_manga.id,
+                                           insert=insert, upload=upload, error=tx_manga_errors)
+            except Exception as ex:
+                logging.info(str(ex))
     db.close()
 
 
