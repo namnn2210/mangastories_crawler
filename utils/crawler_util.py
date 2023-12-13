@@ -157,9 +157,9 @@ def new_manga_builder(manga_obj_dict, slug_format=False, publish=True):
     else:
         manga_type = 1
     if manga_obj_dict['manga_status'].lower() == 'ongoing':
-        publish_status = 0
+        finished = 0
     else:
-        publish_status = 1
+        finished = 1
 
     if slug_format:
         slug = slugify(manga_obj_dict['name'])
@@ -184,7 +184,7 @@ def new_manga_builder(manga_obj_dict, slug_format=False, publish=True):
         'original_id': manga_obj_dict['original_id'],
         'thumb': thumb_path,
         'manga_type_id': manga_type,
-        'publish_status': publish_status,
+        'finished': finished,
         'status': status,
         'published': manga_obj_dict['published'],
         'description': manga_obj_dict['description'],
