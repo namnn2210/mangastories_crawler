@@ -411,9 +411,11 @@ def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_s
     logging.info('Select count %s' % (chapter_count))
     if chapter_count == 0:
         try:
+            logging.info('add to db %s' % manga_chapter_obj)
             db.add(manga_chapter_obj)
             db.commit()
 
+            logging.info('update idx')
             # Update idx after insert
 
             new_manga_chapter = chapter_query.first()
@@ -425,12 +427,14 @@ def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_s
 
             # Update last update
 
+            logging.info('update last update')
             manga_query = db.query(NewManga).filter(NewManga.id == manga_id).first()
             if manga_query:
                 manga_query.latest_chapter_published = manga_chapter_obj.created_at
                 db.commit()
 
         except Exception as ex:
+            logging.info(str(ex))
             db.rollback()
     else:
         logging.info("Update chapter info")
@@ -522,6 +526,8 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
                     s3_path = processed_chapter_dict['s3_prefix'] + \
                               '/' + format_leading_img_count(img_count) + '.webp'
                     s3_url = f'https://{bucket}.ams3.digitaloceanspaces.com/{s3_path}'
+                    logging.info(original)
+                    logging.info(s3_url)
                     resources.append(original)
                     resources_s3.append(s3_url)
                     if upload:
