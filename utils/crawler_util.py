@@ -549,7 +549,7 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
         try:
             existed_chapter = chapter_query.first()
             for key, value in chapter_dict.items():
-                if key != 'created_at':
+                if key != 'created_at' and key != 'resource_status':
                     setattr(existed_chapter, key, value)
             index = 0
             while index < processed_chapter_dict['pages']:
@@ -567,7 +567,7 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
             existed_chapter.resources = resources
             # existed_chapter.resources_s3 = resources_s3
 
-            logging.info('%s => %s ' % (existed_chapter.resource_status, chapter_dict['resource_status']))
+            # logging.info('%s => %s ' % (existed_chapter.resource_status, chapter_dict['resource_status']))
             db.commit()
         except Exception as ex:
             logging.info(str(ex))
