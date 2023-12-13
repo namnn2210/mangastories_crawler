@@ -564,7 +564,7 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
             logging.info('%s => %s ' % (existed_chapter.resource_status, chapter_dict['resource_status']))
             db.commit()
         except Exception as ex:
-            pass
+            logging.info(str(ex))
 
     logging.info('UPDATE UPDATED AT MANGA TO PUSH TO TOP')
     # Update last update         
