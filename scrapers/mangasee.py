@@ -366,25 +366,3 @@ class MangaseeCrawler(Crawler):
         else:
             return '/manga/{}/{}-{}.png'.format(slug, formatted_chapter_number, formatted_img_count)
 
-# def insert_db(self, db, chapter_obj, row_id, pages):
-
-#     chapter_query = db.query(MangaChapters).filter(MangaChapters.manga_id == row_id,
-#                                                    MangaChapters.slug == chapter_obj.slug, MangaChapters.season == chapter_obj.season)
-
-#     chapter_count = chapter_query.count()
-#     if chapter_count == 0:
-#         try:
-#             db.add(chapter_obj)
-#             db.commit()
-#         except Exception as ex:
-#             db.rollback()
-#     else:
-#         logging.info('CHAPTER EXISTS')
-
-#     # Check if chapter has resources
-#     db_chapter_obj = chapter_query.first()
-#     resource_count = db.query(MangaChapterResources).filter(
-#         MangaChapterResources.manga_chapter_id == db_chapter_obj.id).count()
-#     if resource_count == pages:
-#         return False
-#     return True

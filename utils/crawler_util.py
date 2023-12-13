@@ -685,7 +685,8 @@ def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None,
                                     '/' + chapter['chapter_part']
                         list_processed_chapter_dict.append(
                             {'chapter_dict': chapter_dict, 'pages': chapter['pages'], 'resources': chapter[
-                                'resources'], 'resources_storage': chapter['resources_storage'], 's3_prefix': s3_prefix})
+                                'resources'], 'resources_storage': chapter['resources_storage'],
+                             's3_prefix': s3_prefix})
                     logging.info('push chapter to db')
                     # Insert to database
                     for processed_chapter_dict in list_processed_chapter_dict:
