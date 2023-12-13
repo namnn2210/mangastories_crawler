@@ -1,7 +1,8 @@
 from .base.crawler import Crawler
 from .base.crawler_factory import CrawlerFactory
 from .base.enums import ErrorCategoryEnum, MangaSourceEnum
-from utils.crawler_util import get_soup, parse_soup, process_insert_bucket_mapping, process_chapter_ordinal, format_leading_part, new_process_push_to_db, process_push_to_db
+from utils.crawler_util import get_soup, parse_soup, process_insert_bucket_mapping, process_chapter_ordinal, \
+    format_leading_part, new_process_push_to_db, process_push_to_db
 from connections.connection import Connection
 from configs.config import MAX_THREADS
 from datetime import datetime
@@ -12,19 +13,20 @@ import re
 import pytz
 import requests
 
-
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.76', 
-    'Referer':'https://ww7.mangakakalot.tv/'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.76',
+    'Referer': 'https://ww7.mangakakalot.tv/'
 }
+
 
 class MangakakalotCrawlerFactory(CrawlerFactory):
     def create_crawler(self):
         logging.info('Mangakakalot crawler created')
         return MangakakalotCrawler()
-    
+
+
 class MangakakalotCrawler(Crawler):
 
     def crawl(self, original_id=None):
@@ -34,20 +36,21 @@ class MangakakalotCrawler(Crawler):
         mongo_collection = mongo_db['tx_mangas']
         tx_manga_errors = mongo_db['tx_manga_errors']
         tx_manga_bucket_mapping = mongo_db['tx_manga_bucket_mapping']
-        
+
         # Crawl multiple pages
         list_manga_urls = self.get_all_manga_urls()
-        
+
         logging.info('Total mangas: %s' % len(list_manga_urls))
-        
+
         # list_manga_urls = ['https://ww7.mangakakalot.tv/manga/manga-we999613']
-        
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors) for manga_url in list_manga_urls]
-            
+            futures = [executor.submit(self.extract_manga_info, manga_url, mongo_collection, tx_manga_bucket_mapping,
+                                       tx_manga_errors) for manga_url in list_manga_urls]
+
         for future in futures:
             future.result()
-            
+
     def get_all_manga_urls(self):
         page = 1
         list_manga_urls = []
@@ -63,102 +66,101 @@ class MangakakalotCrawler(Crawler):
             list_mangas = future.result()
             list_manga_urls += list_mangas
         return list_manga_urls
-    
+
     def process_get(self, starting_url):
         logging.info("Processing: %s " % starting_url)
         list_mangas = self.process_page_urls(starting_url)
         return list_mangas
-    
+
     def process_page_urls(self, url):
         list_mangas = []
-        page_soup = get_soup(url,headers)
-        list_manga_div = page_soup.find_all('div',{'class':'list-truyen-item-wrap'})
+        page_soup = get_soup(url, headers)
+        list_manga_div = page_soup.find_all('div', {'class': 'list-truyen-item-wrap'})
         for manga_div in list_manga_div:
             manga_href = manga_div.find('a')['href']
             manga_url = f'https://ww7.mangakakalot.tv{manga_href}'
             list_mangas.append(manga_url)
         return list_mangas
-    
-    def extract_manga_info(self,manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors):
+
+    def extract_manga_info(self, manga_url, mongo_collection, tx_manga_bucket_mapping, tx_manga_errors):
         try:
             logging.info(manga_url)
-            manga_soup = get_soup(manga_url,headers)
+            manga_soup = get_soup(manga_url, headers)
             manga_original_id = manga_url.split('/')[-1]
-            
+
             # Manga info  
-            manga_info_top = manga_soup.find('div',{'class':'manga-info-top'})
-            
+            manga_info_top = manga_soup.find('div', {'class': 'manga-info-top'})
+
             # Thumb
-            manga_thumb_href = manga_info_top.find('div',{'class':'manga-info-pic'}).find('img')['src']
+            manga_thumb_href = manga_info_top.find('div', {'class': 'manga-info-pic'}).find('img')['src']
             manga_thumb = f'https://ww7.mangakakalot.tv{manga_thumb_href}'
-            
-            manga_info_text = manga_soup.find('ul',{'class':'manga-info-text'})
-            
+
+            manga_info_text = manga_soup.find('ul', {'class': 'manga-info-text'})
+
             list_info_li = manga_info_text.find_all('li')
-            
+
             # Name
             name_li = list_info_li[0]
             manga_name = name_li.find('h1').text
-            alternative_name_div = name_li.find('h2', {'class':'story-alternative'})
+            alternative_name_div = name_li.find('h2', {'class': 'story-alternative'})
             if alternative_name_div:
                 alternative_name = alternative_name_div.text
             else:
                 alternative_name = ''
-            
+
             # Description
-            manga_description = " ".join(manga_soup.find('div',{'id':'noidungm'}).text.split())
-            
-            
+            manga_description = " ".join(manga_soup.find('div', {'id': 'noidungm'}).text.split())
+
             # Bucket
             manga_bucket = tx_manga_bucket_mapping.find_one({'original_id': manga_original_id})
             if manga_bucket:
                 bucket = manga_bucket['bucket']
             else:
                 bucket = process_insert_bucket_mapping(manga_original_id, tx_manga_bucket_mapping)
-                
+
             # Author:
             author_li_text = list_info_li[1].text
-            author = " ".join(author_li_text.replace('Author(s) :','').split())
-            
+            author = " ".join(author_li_text.replace('Author(s) :', '').split())
+
             # Status:
             status_li_text = list_info_li[2].text
-            status = " ".join(status_li_text.replace('Status :','').split())
-            
+            status = " ".join(status_li_text.replace('Status :', '').split())
+
             # Status:
             genres_li_text = list_info_li[6].text
-            genres = " ".join(genres_li_text.replace('Genres :','').split())
-            
+            genres = " ".join(genres_li_text.replace('Genres :', '').split())
+
             if 'Manhua' in genres:
                 manga_type = 'Manhua'
             elif 'Manhwa' in genres:
                 manga_type = 'Manhua'
             else:
                 manga_type = 'Manga'
-            
-            
-            list_chapters = manga_soup.find('div',{'class':'chapter-list'}).find_all('div',{'class':'row'})
+
+            list_chapters = manga_soup.find('div', {'class': 'chapter-list'}).find_all('div', {'class': 'row'})
             manga_count_chapters = len(list_chapters)
-            
+
             list_chapters_info = []
             for chapter in list_chapters:
-                    chapter_info_dict = self.extract_chapter_info(chapter=chapter, manga_slug=manga_original_id, bucket=bucket)
-                    list_chapters_info.append(chapter_info_dict)
+                chapter_info_dict = self.extract_chapter_info(chapter=chapter, manga_slug=manga_original_id,
+                                                              bucket=bucket)
+                list_chapters_info.append(chapter_info_dict)
             final_dict = {
-                'name':manga_name,
-                'original':manga_url,
+                'name': manga_name,
+                'original': manga_url,
                 'original_id': manga_original_id,
-                'thumb':manga_thumb,
-                'genre':genres,
-                'manga_type':manga_type,
-                'manga_status':status,
-                'author':author,
-                'published':'',
-                'description':manga_description,
-                'genre':genres,
-                'count_chapters': manga_count_chapters, 
+                'thumb': manga_thumb,
+                'genre': genres,
+                'manga_type': manga_type,
+                'manga_status': status,
+                'author': author,
+                'published': '',
+                'description': manga_description,
+                'genre': genres,
+                'count_chapters': manga_count_chapters,
                 'chapters': list_chapters_info,
-                'alternative_name':alternative_name,
-                'source_site':MangaSourceEnum.MANGAKAKALOT.value
+                'alternative_name': alternative_name,
+                'source_site': MangaSourceEnum.MANGAKAKALOT.value
             }
             # for detail_dict in list_processed_details:
             #     key, value = next(iter(detail_dict.items()))
@@ -168,22 +170,24 @@ class MangakakalotCrawler(Crawler):
             mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
         except Exception as ex:
             logging.info(str(ex))
-            tx_manga_errors.insert_one({'type':ErrorCategoryEnum.MANGA_PROCESSING.name,'date':datetime.now(),'description':str(ex),'data': ''})
-    
-    def extract_chapter_info(self, chapter,manga_slug,bucket):
+            tx_manga_errors.insert_one(
+                {'type': ErrorCategoryEnum.MANGA_PROCESSING.name, 'date': datetime.now(), 'description': str(ex),
+                 'data': ''})
+
+    def extract_chapter_info(self, chapter, manga_slug, bucket):
         chapter_info_span = chapter.find_all('span')
-        chapter_href = chapter_info_span[0].find('a')['href'] 
+        chapter_href = chapter_info_span[0].find('a')['href']
         chapter_url = 'https://ww7.mangakakalot.tv' + chapter_href
 
         chapter_slug = manga_slug + '-' + chapter_href.split('/')[-1]
-        chapter_soup = get_soup(chapter_url,headers)
-        
-        chapter_ordinal =  chapter_href.split('/')[-1].replace('chapter-','')
+        chapter_soup = get_soup(chapter_url, headers)
+
+        chapter_ordinal = chapter_href.split('/')[-1].replace('chapter-', '')
         chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
         chapter_season = format_leading_part(0)
-        
-        reader_area = chapter_soup.find('div',{'class':'vung-doc'})
-        list_images = reader_area.find_all('img',{'class':'img-loading'})
+
+        reader_area = chapter_soup.find('div', {'class': 'vung-doc'})
+        list_images = reader_area.find_all('img', {'class': 'img-loading'})
         list_resources = []
         for image in list_images:
             original_url = image['data-src']
@@ -191,38 +195,40 @@ class MangakakalotCrawler(Crawler):
             chapter_source_match = re.search(regex_url, original_url)
             if chapter_source_match:
                 chapter_source = chapter_source_match.group(1)
-                img_url = original_url.replace(chapter_source_match.group(),'')
+                img_url = original_url.replace(chapter_source_match.group(), '')
             else:
                 img_url = original_url
             list_resources.append(img_url)
         chapter_info_dict = {
-            'ordinal':chapter_ordinal,
-            'chapter_number':chapter_number,
-            'chapter_part':chapter_part,
-            'slug':chapter_slug ,
-            'original':chapter_url,
+            'ordinal': chapter_ordinal,
+            'chapter_number': chapter_number,
+            'chapter_part': chapter_part,
+            'slug': chapter_slug,
+            'original': chapter_url,
             'resource_status': 'ORIGINAL',
-            'season':chapter_season,
-            'pages':len(list_resources),
+            'season': chapter_season,
+            'pages': len(list_resources),
             'resources': list_resources,
             'resources_storage': chapter_source,
             'resources_bucket': bucket,
-            'date':datetime.now(tz=pytz.timezone('America/Chicago'))
+            'date': datetime.now(tz=pytz.timezone('America/Chicago'))
         }
         return chapter_info_dict
-    
-    
+
     def update_chapter(self):
         return super().update_chapter()
-    
+
     def update_manga(self):
         return super().update_manga()
-    
-    def push_to_db(self, mode='crawl', type='manga', list_update_original_id=None, upload=False, count=None, new=True,slug_format=True,publish=False, bulk=False):
+
+    def push_to_db(self, mode='crawl', type='manga', list_update_original_id=None, upload=False, count=None, new=True,
+                   slug_format=True, publish=False, bulk=False):
         if new:
             new_process_push_to_db(mode=mode, type=type, list_update_original_id=list_update_original_id,
-                                   source_site=MangaSourceEnum.MANGAKAKALOT.value, upload=upload, count=count, slug_format=slug_format, publish=publish, bulk=bulk)
+                                   source_site=MangaSourceEnum.MANGAKAKALOT.value, upload=upload, count=count,
+                                   slug_format=slug_format, publish=publish, bulk=bulk)
         else:
             process_push_to_db(
                 mode=mode, type=type, list_update_original_id=list_update_original_id,
-                                   source_site=MangaSourceEnum.MANGAKAKALOT.value, upload=upload, slug_format=slug_format, publish=publish, count=count)
+                source_site=MangaSourceEnum.MANGAKAKALOT.value, insert=True, upload=upload, slug_format=slug_format,
+                publish=publish, count=count)
