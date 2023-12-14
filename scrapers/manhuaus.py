@@ -183,7 +183,7 @@ class ManhuausCrawler(Crawler):
         chapter_season = format_leading_part(0)
         for index, img_div in enumerate(list_images):
             image = img_div.find('img')
-            original_url = image['data-src']
+            original_url = image['data-src'].replace('\n', '').replace('\t', '').strip()
             regex_url = r'^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:\/\n\?\=]+)'
             chapter_source_match = re.search(regex_url, original_url)
             if chapter_source_match:
