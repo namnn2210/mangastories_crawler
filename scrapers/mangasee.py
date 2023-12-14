@@ -93,28 +93,29 @@ class MangaseeCrawler(Crawler):
                 chapter_info_dict = self.extract_chapter_info(
                     chapter_source, chapter_info, chapter_url, chapter['IndexName'], bucket)
 
-                # Update to new db
-                logging.info('UPDATE TO NEW DB')
+                if chapter_info_dict:
+                    # Update to new db
+                    logging.info('UPDATE TO NEW DB')
 
-                chapter_dict_new = new_chapter_builder(
-                    chapter_info_dict, existed_manga.id, source_site=MangaSourceEnum.MANGASEE.value, publish=publish)
-                new_push_chapter_to_db(
-                    db, chapter_dict_new, bucket, existed_manga.id, existed_manga.slug, upload=False,
-                    error=tx_manga_errors)
+                    chapter_dict_new = new_chapter_builder(
+                        chapter_info_dict, existed_manga.id, source_site=MangaSourceEnum.MANGASEE.value, publish=publish)
+                    new_push_chapter_to_db(
+                        db, chapter_dict_new, bucket, existed_manga.id, existed_manga.slug, upload=False,
+                        error=tx_manga_errors)
 
-                # Update to old db
-                logging.info('UPDATE TO old DB')
-                old_db = Connection().mysql_connect(db_name='mangamonster_com')
-                chapter_dict_old = chapter_builder(chapter_info_dict, existed_manga.id, publish=publish)
-                s3_prefix = 'storage/' + existed_manga.original_id.lower() + '/' + \
-                            chapter_info_dict['season'] + '/' + chapter_info_dict['chapter_number'] + \
-                            '/' + chapter_info_dict['chapter_part']
-                processed_chapter_dict = {'chapter_dict': chapter_dict_old, 'pages': chapter_info_dict['pages'],
-                                          'resources': chapter_info_dict[
-                                              'resources'], 'resources_storage': chapter_info_dict['resources_storage'],
-                                          's3_prefix': s3_prefix}
-                push_chapter_to_db(old_db, processed_chapter_dict, bucket, existed_manga.id,
-                                   insert=True, upload=True, error=tx_manga_errors)
+                    # Update to old db
+                    logging.info('UPDATE TO old DB')
+                    old_db = Connection().mysql_connect(db_name='mangamonster_com')
+                    chapter_dict_old = chapter_builder(chapter_info_dict, existed_manga.id, publish=publish)
+                    s3_prefix = 'storage/' + existed_manga.original_id.lower() + '/' + \
+                                chapter_info_dict['season'] + '/' + chapter_info_dict['chapter_number'] + \
+                                '/' + chapter_info_dict['chapter_part']
+                    processed_chapter_dict = {'chapter_dict': chapter_dict_old, 'pages': chapter_info_dict['pages'],
+                                              'resources': chapter_info_dict[
+                                                  'resources'], 'resources_storage': chapter_info_dict['resources_storage'],
+                                              's3_prefix': s3_prefix}
+                    push_chapter_to_db(old_db, processed_chapter_dict, bucket, existed_manga.id,
+                                       insert=True, upload=True, error=tx_manga_errors)
 
     def update_chapter(self):
         logging.info('Updating new chapters...')
@@ -266,46 +267,48 @@ class MangaseeCrawler(Crawler):
             ), 'description': str(ex), 'data': ''})
 
     def extract_chapter_info(self, chapter_source, chapter_info, chapter_url, manga_slug, bucket):
-        formatted_chapter_number = format_leading_chapter(
-            format_chapter_number(chapter_info['Chapter']))
-        # Process chapter + chapter resources
-        index_string = chapter_info['Chapter'][0:1]
-        if index_string == '1':
-            season = 0
-        else:
-            season = int(index_string)
-        if chapter_info['Directory'] and chapter_info['Directory'] != '':
-            directory = chapter_info['Directory']
-            directory_slug = '-' + directory
-        else:
-            directory = ''
-            directory_slug = ''
-        # Generate resources:
-        list_resources = []
-        chapter_ordinal = format_chapter_number(chapter_info['Chapter'])
-        chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
-        chapter_season = format_leading_part(int(season))
-        for i in range(1, int(chapter_info['Page']) + 1):
-            img_url = self.get_image_url(slug=manga_slug, directory=directory,
-                                         formatted_chapter_number=formatted_chapter_number,
-                                         formatted_img_count=format_leading_img_count(i))
-            list_resources.append(img_url)
-        chapter_info_dict = {
-            'ordinal': chapter_ordinal,
-            'chapter_number': chapter_number,
-            'chapter_part': chapter_part,
-            'slug': manga_slug.lower() + directory_slug.lower() + '-chapter-' + format_chapter_number(
-                chapter_info['Chapter']).replace('.', '-'),
-            'original': chapter_url,
-            'resource_status': 'ORIGINAL',
-            'season': chapter_season,
-            'resources': list_resources,
-            'resources_storage': chapter_source,
-            'resources_bucket': bucket,
-            'pages': len(list_resources),
-            'date': chapter_info['Date']
-        }
-        return chapter_info_dict
+        if chapter_info:
+            formatted_chapter_number = format_leading_chapter(
+                format_chapter_number(chapter_info['Chapter']))
+            # Process chapter + chapter resources
+            index_string = chapter_info['Chapter'][0:1]
+            if index_string == '1':
+                season = 0
+            else:
+                season = int(index_string)
+            if chapter_info['Directory'] and chapter_info['Directory'] != '':
+                directory = chapter_info['Directory']
+                directory_slug = '-' + directory
+            else:
+                directory = ''
+                directory_slug = ''
+            # Generate resources:
+            list_resources = []
+            chapter_ordinal = format_chapter_number(chapter_info['Chapter'])
+            chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
+            chapter_season = format_leading_part(int(season))
+            for i in range(1, int(chapter_info['Page']) + 1):
+                img_url = self.get_image_url(slug=manga_slug, directory=directory,
+                                             formatted_chapter_number=formatted_chapter_number,
+                                             formatted_img_count=format_leading_img_count(i))
+                list_resources.append(img_url)
+            chapter_info_dict = {
+                'ordinal': chapter_ordinal,
+                'chapter_number': chapter_number,
+                'chapter_part': chapter_part,
+                'slug': manga_slug.lower() + directory_slug.lower() + '-chapter-' + format_chapter_number(
+                    chapter_info['Chapter']).replace('.', '-'),
+                'original': chapter_url,
+                'resource_status': 'ORIGINAL',
+                'season': chapter_season,
+                'resources': list_resources,
+                'resources_storage': chapter_source,
+                'resources_bucket': bucket,
+                'pages': len(list_resources),
+                'date': chapter_info['Date']
+            }
+            return chapter_info_dict
+        return None
 
     def push_to_db(self, mode='crawl', type='manga', list_update_original_id=None, upload=False, count=None, new=True,
                    slug_format=True, publish=False, bulk=False):
