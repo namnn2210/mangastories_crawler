@@ -97,7 +97,9 @@ class ManhuausCrawler(Crawler):
                                                                                                         '').strip()
 
             # Description
-            manga_description = manga_soup.find('meta', {'property': 'og:description'})['content']
+            manga_description = manga_soup.find('div', {'class': 'summary__content'}).find_all('p')[0].text.replace(
+                '\t', '').replace('\n',
+                                  '').strip()
 
             # Bucket
             manga_bucket = tx_manga_bucket_mapping.find_one({'original_id': manga_original_id})
@@ -127,7 +129,7 @@ class ManhuausCrawler(Crawler):
                 'thumb': manga_thumb,
                 'count_chapters': manga_count_chapters,
                 'chapters': list_chapters_info,
-                'source_site': MangaSourceEnum.MANHUAPLUS.value
+                'source_site': MangaSourceEnum.MANHUAUS.value
             }
 
             if manga_description:
