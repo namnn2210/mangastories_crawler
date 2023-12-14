@@ -142,10 +142,13 @@ class ManhuausCrawler(Crawler):
                 final_dict[key] = value
                 # Insert or Update
 
-            if 'Manhua' in final_dict['genre']:
-                final_dict['manga_type'] = 'Manhua'
-            elif 'Manhwa' in final_dict['genre']:
-                final_dict['manga_type'] = 'Manhua'
+            if final_dict['genre']:
+                if 'Manhua' in final_dict['genre']:
+                    final_dict['manga_type'] = 'Manhua'
+                elif 'Manhwa' in final_dict['genre']:
+                    final_dict['manga_type'] = 'Manhua'
+                else:
+                    final_dict['manga_type'] = 'Manga'
             else:
                 final_dict['manga_type'] = 'Manga'
 
