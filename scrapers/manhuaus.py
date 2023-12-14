@@ -144,6 +144,7 @@ class ManhuausCrawler(Crawler):
 
 
             logging.info('==============')
+            logging.info(list_processed_detail)
             if final_dict['genre']:
                 if 'Manhua' in final_dict['genre']:
                     final_dict['manga_type'] = 'Manhua'
