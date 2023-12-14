@@ -123,18 +123,22 @@ class MangaseeCrawler(Crawler):
         soup = get_soup(manga_url, header=header)
         script = soup.findAll('script')[-1].text
         regex_hot_update = r'vm.HotUpdateJSON\s=\s.{0,};'
-        # regex_latest_json = r'vm.LatestJSON\s=\s.{0,};'
+        regex_latest_json = r'vm.LatestJSON\s=\s.{0,};'
         hot_update_match = re.search(regex_hot_update, script)
-        # latest_json_match = re.search(regex_latest_json, script)
-        # list_latest_json = []
+        latest_json_match = re.search(regex_latest_json, script)
+        list_latest_json = []
         list_hot_update = []
         if hot_update_match:
             hot_update_str = hot_update_match.group().replace(
                 'vm.HotUpdateJSON = ', '').replace(';', '')
             list_hot_update = json.loads(hot_update_str)
-
-        logging.info('Mangasee new update: %s' % len(list_hot_update))
-        self.crawl_chapter(list_hot_update)
+        if latest_json_match:
+            latest_json_str = latest_json_match.group().replace(
+                'vm.LatestJSON = ', '').replace(';', '')
+            list_latest_json = json.loads(latest_json_str)
+        list_update_json = list_hot_update + list_latest_json
+        logging.info('Mangasee new update: %s' % len(list_update_json))
+        self.crawl_chapter(list_update_json)
 
     def update_manga(self):
         logging.info('Updating new mangas...')
