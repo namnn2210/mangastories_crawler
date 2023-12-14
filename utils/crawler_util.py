@@ -526,8 +526,6 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
                     s3_path = processed_chapter_dict['s3_prefix'] + \
                               '/' + format_leading_img_count(img_count) + '.webp'
                     s3_url = f'https://{bucket}.ams3.digitaloceanspaces.com/{s3_path}'
-                    logging.info(original)
-                    logging.info(s3_url)
                     resources.append(original)
                     resources_s3.append(s3_url)
                     if upload:

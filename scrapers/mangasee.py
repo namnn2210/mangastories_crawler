@@ -91,7 +91,6 @@ class MangaseeCrawler(Crawler):
                 chapter_url)
             chapter_info_dict = self.extract_chapter_info(
                 chapter_source, chapter_info, chapter_url, chapter['IndexName'], bucket)
-            logging.info(chapter_info_dict)
 
             # Update to new db
             logging.info('UPDATE TO NEW DB')
@@ -118,7 +117,7 @@ class MangaseeCrawler(Crawler):
 
     def update_chapter(self):
         logging.info('Updating new chapters...')
-
+        logging.info('Time: %s' % datetime.now())
         manga_url = 'https://mangasee123.com/'
         soup = get_soup(manga_url, header=header)
         script = soup.findAll('script')[-1].text
