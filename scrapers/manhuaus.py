@@ -142,6 +142,13 @@ class ManhuausCrawler(Crawler):
                 final_dict[key] = value
                 # Insert or Update
 
+            if 'Manhua' in final_dict['genre']:
+                final_dict['manga_type'] = 'Manhua'
+            elif 'Manhwa' in final_dict['genre']:
+                final_dict['manga_type'] = 'Manhua'
+            else:
+                final_dict['manga_type'] = 'Manga'
+
             logging.info(final_dict)
             filter_criteria = {"original_id": final_dict["original_id"]}
             mongo_collection.update_one(filter_criteria, {"$set": final_dict}, upsert=True)
@@ -157,7 +164,7 @@ class ManhuausCrawler(Crawler):
             detail_name = detail.find('div', {'class': 'summary-heading'}).text
             detail_value = detail.find('div', {'class': 'summary-content'}).text
             if detail_name.strip() == 'Alternative':
-                list_processed_detail.append({'alternative_name': detail_value})
+                list_processed_detail.append({'alt_name': detail_value})
             elif detail_name.strip() == 'Author(s)':
                 list_processed_detail.append({'author': detail_value})
             elif detail_name.strip() == 'Type':
