@@ -11,7 +11,7 @@ from .base.enums import ErrorCategoryEnum, MangaSourceEnum
 from models.entities import Manga
 from utils.crawler_util import get_soup, parse_soup, format_leading_part, process_chapter_ordinal, \
     new_process_push_to_db, \
-    process_insert_bucket_mapping
+    process_insert_bucket_mapping, process_push_to_db
 from configs.config import MAX_THREADS
 from datetime import datetime
 
@@ -239,4 +239,12 @@ class ManhuausCrawler(Crawler):
 
     def push_to_db(self, mode='crawl', type='manga', list_update_original_id=None, upload=False, count=None, new=True,
                    slug_format=True, publish=False, bulk=False):
-        pass
+        if new:
+            new_process_push_to_db(mode=mode, type=type, list_update_original_id=list_update_original_id,
+                                   source_site=MangaSourceEnum.MANHUAUS.value, upload=upload, count=count,
+                                   slug_format=slug_format, publish=publish, bulk=bulk)
+        else:
+            process_push_to_db(
+                mode=mode, type=type, list_update_original_id=list_update_original_id,
+                source_site=MangaSourceEnum.MANHUAUS.value, insert=True, upload=upload, slug_format=slug_format,
+                publish=publish, count=count)
