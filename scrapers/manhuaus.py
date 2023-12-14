@@ -109,7 +109,7 @@ class ManhuausCrawler(Crawler):
                 bucket = process_insert_bucket_mapping(manga_original_id, tx_manga_bucket_mapping)
 
             manga_info = manga_soup.find('div', {'class': 'summary_content'}).find('div', {'class': 'post-content'})
-            list_details = manga_info.find_all('div', {'class': 'post_content'})
+            list_details = manga_info.find_all('div', {'class': 'post-content_item'})
             list_processed_detail = self.process_detail(list_details)
 
             list_chapters = manga_soup.find('ul', {'class': 'version-chap'}).find_all('li')
@@ -142,9 +142,6 @@ class ManhuausCrawler(Crawler):
                 final_dict[key] = value
                 # Insert or Update
 
-
-            logging.info('==============')
-            logging.info(list_processed_detail)
             if final_dict['genre']:
                 if 'Manhua' in final_dict['genre']:
                     final_dict['manga_type'] = 'Manhua'
