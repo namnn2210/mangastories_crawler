@@ -271,10 +271,13 @@ class AsuratoonCrawler(Crawler):
         for future in futures:
             future.result()
 
-    def push_to_db(self, mode='crawl', type='manga', list_update_original_id=None, upload=False, count=None, new=True):
+    def push_to_db(self, mode='crawl', type='manga', list_update_original_id=None, upload=False, count=None, new=True,
+                   slug_format=True, publish=False, bulk=False):
         if new:
             new_process_push_to_db(mode=mode, type=type, list_update_original_id=list_update_original_id,
                                    source_site=MangaSourceEnum.ASURATOON.value, upload=upload, count=count)
         else:
             process_push_to_db(
-                mode='all', source_site=MangaSourceEnum.ASURATOON.value, insert=True, upload=True, count=20)
+                mode=mode, type=type, list_update_original_id=list_update_original_id,
+                source_site=MangaSourceEnum.ASURATOON.value, insert=True, upload=upload, slug_format=slug_format,
+                publish=publish, count=count)
