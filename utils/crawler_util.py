@@ -428,6 +428,8 @@ def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_s
             logging.info('update idx')
             # Update idx after insert
 
+            chapter_query = db.query(NewMangaChapters).filter(NewMangaChapters.manga_id == manga_id, NewMangaChapters.chapter_code == float(manga_chapter_obj.chapter_code))
+
             new_manga_chapter = chapter_query.first()
             if new_manga_chapter is not None:
                 idx = hashidx(new_manga_chapter.id)
