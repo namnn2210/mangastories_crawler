@@ -243,9 +243,9 @@ def manga_builder(manga_obj_dict, slug_format=False, publish=True):
         'thumb': thumb_path,
         'manga_type_id': manga_type,
         'status': status,
-        'description': manga_obj_dict.get('description',''),
-        'author': manga_obj_dict.get('author',''),
-        'genre': manga_obj_dict.get('genre',''),
+        'description': manga_obj_dict.get('description', ''),
+        'author': manga_obj_dict.get('author', ''),
+        'genre': manga_obj_dict.get('genre', ''),
         'total_view': 0,
         'created_by': 0,
         'updated_by': 0,
@@ -666,8 +666,10 @@ def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None,
         if type == 'chapter' or type == 'all':
             logging.info('Inserting manga chapters for manga: %s' %
                          manga['original_id'])
-
             try:
+                if slug_format:
+                    existed_manga_query = db.query(Manga).where(Manga.slug_original == slugify(manga['name'])).where(
+                        Manga.status == 1)
                 existed_manga = existed_manga_query.first()
                 logging.info(existed_manga.slug)
                 bucket = tx_manga_bucket_mapping.find_one({'$or': [{"original_id": existed_manga.slug_original}, {
