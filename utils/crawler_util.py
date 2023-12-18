@@ -174,10 +174,13 @@ def new_manga_builder(manga_obj_dict, slug_format=False, publish=True):
     else:
         status = 0
 
-    search_content = re.sub('[^a-zA-Z0-9]', ' ', manga_obj_dict['name']) + ', ' + manga_obj_dict.get('alternative_name',
-                                                                                                     '') + ', ' + \
-                     manga_obj_dict['author'] + ', ' + manga_obj_dict['genre'] + ', ' + manga_obj_dict.get('manga_type',
-                                                                                                           'manga').lower()
+    search_content = re.sub('[^a-zA-Z0-9]', ' ', manga_obj_dict.get('name', '')) + ', ' + manga_obj_dict.get(
+        'alternative_name',
+        '') + ', ' + \
+                     manga_obj_dict.get('author', '') + ', ' + manga_obj_dict.get('genre',
+                                                                                  '') + ', ' + manga_obj_dict.get(
+        'manga_type',
+        'manga').lower()
 
     manga_dict = {
         'name': manga_obj_dict['name'],
