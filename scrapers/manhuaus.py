@@ -177,7 +177,7 @@ class ManhuausCrawler(Crawler):
             elif detail_name.strip() == 'Release':
                 list_processed_detail.append({'published': detail_value})
             elif detail_name.strip() == 'Status':
-                list_processed_detail.append({'status': detail_value})
+                list_processed_detail.append({'manga_status': detail_value})
         return list_processed_detail
 
     def extract_chapter_info(self, chapter, str_chapter_num, manga_slug, bucket):
