@@ -206,7 +206,7 @@ def new_manga_builder(manga_obj_dict, slug_format=False, publish=True):
 
 def manga_builder(manga_obj_dict, slug_format=False, publish=True):
     logging.info('go to builder')
-    img = Image.open(BytesIO(requests.get(manga_obj_dict['thumb']).content))
+
     today = datetime.now()
     today_str = '{}/{}/{}'.format(str(today.year),
                                   str(today.month), str(today.day))
@@ -214,7 +214,11 @@ def manga_builder(manga_obj_dict, slug_format=False, publish=True):
         today_str, manga_obj_dict['original_id'].lower())
     thumb_save_path = f'/www-data/mangamonster.com/storage/app/public/{thumb_path}'
     os.makedirs(os.path.dirname(thumb_save_path), exist_ok=True)
-    img.convert('RGB').save(thumb_save_path)
+    try:
+        img = Image.open(BytesIO(requests.get(manga_obj_dict['thumb']).content))
+        img.convert('RGB').save(thumb_save_path)
+    except Exception as ex:
+        logging.error(str(ex))
     if manga_obj_dict['manga_type'] == 'Manga':
         manga_type = 1
     elif manga_obj_dict['manga_type'] == 'Manhua':
