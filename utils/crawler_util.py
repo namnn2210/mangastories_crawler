@@ -651,8 +651,12 @@ def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None,
     logging.info('==================== %s' % list_mangas)
     for manga in list_mangas:
         # Check if manga in DB:
-        existed_manga_query = db.query(Manga).where(
-            Manga.slug_original == manga['original_id'].lower()).where(Manga.status == 1)
+        if slug_format:
+            existed_manga_query = db.query(Manga).where(Manga.slug == slugify(manga['name'])).where(
+                Manga.status == 1)
+        else:
+            existed_manga_query = db.query(Manga).where(
+                Manga.slug_original == manga['original_id'].lower()).where(Manga.status == 1)
         if type == 'manga' or type == 'all':
             if existed_manga_query.first() is None:
                 logging.info('Inserting manga: %s' % manga['original_id'])
@@ -667,9 +671,6 @@ def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None,
             logging.info('Inserting manga chapters for manga: %s' %
                          manga['original_id'])
             try:
-                if slug_format:
-                    existed_manga_query = db.query(Manga).where(Manga.slug_original == slugify(manga['name'])).where(
-                        Manga.status == 1)
                 existed_manga = existed_manga_query.first()
                 logging.info(existed_manga.slug)
                 bucket = tx_manga_bucket_mapping.find_one({'$or': [{"original_id": existed_manga.slug_original}, {
