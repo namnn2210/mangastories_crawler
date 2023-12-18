@@ -156,7 +156,7 @@ def new_manga_builder(manga_obj_dict, slug_format=False, publish=True):
         manga_type = 3
     else:
         manga_type = 1
-    if manga_obj_dict['manga_status']:
+    if 'manga_status' in manga_obj_dict.keys():
         if manga_obj_dict['manga_status'].lower() == 'ongoing':
             finished = 0
         else:
