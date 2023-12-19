@@ -354,14 +354,10 @@ def push_manga_to_db(db, manga, slug_format=False, publish=True):
     manga_dict = manga_builder(manga, slug_format, publish)
     logging.info('=================== %s' % manga_dict)
     manga_obj = Manga(**manga_dict)
-    query_new_manga = db.query(Manga).where(
-        Manga.slug == manga_dict['slug'])
-    try:
-        db.add(manga_obj)
-        db.commit()
-        logging.info('NEW MANGA INSERTED')
-    except Exception as ex:
-        db.rollback()
+
+    db.add(manga_obj)
+    db.commit()
+    logging.info('NEW MANGA INSERTED')
 
     query_new_manga = db.query(Manga).where(
         Manga.slug == manga_dict['slug'])
