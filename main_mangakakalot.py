@@ -140,4 +140,4 @@ if __name__ == "__main__":
     mangakakalot = MangakakalotCrawlerFactory().create_crawler().push_to_db(mode='update', type='all',
                                                                             list_update_original_id=list_update_original_id,
                                                                             slug_format=True, publish=True,
-                                                                            count=6000, new=False, upload=True)
+                                                                            count=6000, new=False, upload=False)
