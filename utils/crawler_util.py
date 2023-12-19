@@ -553,6 +553,7 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
             db.add(manga_chapter_obj)
             db.commit()
         except Exception as ex:
+            logging.info(str(ex))
             db.rollback()
     else:
         logging.info('CHAPTER EXISTS => UPDATE')
