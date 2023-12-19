@@ -355,9 +355,12 @@ def push_manga_to_db(db, manga, slug_format=False, publish=True):
     logging.info('=================== %s' % manga_dict)
     manga_obj = Manga(**manga_dict)
 
-    db.add(manga_obj)
-    db.commit()
-    logging.info('NEW MANGA INSERTED')
+    try:
+        db.add(manga_obj)
+        db.commit()
+        logging.info('NEW MANGA INSERTED')
+    except Exception as ex:
+        db.rollback()
 
     query_new_manga = db.query(Manga).where(
         Manga.slug == manga_dict['slug'])
@@ -439,6 +442,7 @@ def new_push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, manga_s
             manga_query = db.query(NewManga).filter(NewManga.id == manga_id).first()
             if manga_query:
                 manga_query.latest_chapter_published = manga_chapter_obj.created_at
+                manga_query.updated_at = datetime.now(tz=pytz.timezone('America/Chicago'))
                 db.commit()
 
         except Exception as ex:
