@@ -138,7 +138,6 @@ if __name__ == "__main__":
                                'manga-kg952241',
                                'manga-vx951832', 'manga-nf951488']
     # list_update_original_id = ['manga-nf951488']
-    mangakakalot = MangakakalotCrawlerFactory().create_crawler().push_to_db(mode='update', type='all',
-                                                                            list_update_original_id=list_update_original_id,
-                                                                            slug_format=True, publish=True,
-                                                                            count=6000, new=False, upload=False)
+    mangakakalot = MangakakalotCrawlerFactory().create_crawler().push_to_db(type='all',
+                                                                            slug_format=True, publish=False,
+                                                                            count=10000, new=False, upload=False)
