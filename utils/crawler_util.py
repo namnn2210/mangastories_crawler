@@ -521,7 +521,7 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
     resources_s3 = []
 
     chapter_query = db.query(MangaChapters).filter(MangaChapters.manga_id == manga_id,
-                                                   MangaChapters.slug == manga_chapter_obj.slug,
+                                                   MangaChapters.ordinal == manga_chapter_obj.ordinal,
                                                    MangaChapters.season == manga_chapter_obj.season)
 
     chapter_count = chapter_query.count()
