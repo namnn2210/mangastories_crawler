@@ -281,7 +281,7 @@ def new_chapter_builder(chapter_dict, manga_id, source_site, publish=True):
         status = 0
     return {
         "name": name,
-        "slug": chapter_dict['slug'],
+        "slug": chapter_dict['slug'].replace('.', '-'),
         "original": source_site,
         "manga_id": manga_id,
         "ordinal": chapter_dict['ordinal'],
@@ -318,7 +318,7 @@ def chapter_builder(chapter_dict, manga_id, publish=True):
         status = 0
     return {
         "name": name,
-        "slug": chapter_dict['slug'],
+        "slug": chapter_dict['slug'].replace('.', '-'),
         "original": chapter_dict['original'],
         "published": chapter_dict['date'],
         "manga_id": manga_id,
