@@ -179,7 +179,7 @@ class MangakakalotCrawler(Crawler):
         chapter_href = chapter_info_span[0].find('a')['href']
         chapter_url = 'https://ww7.mangakakalot.tv' + chapter_href
 
-        chapter_slug = manga_slug + '-' + chapter_href.split('/')[-1]
+        chapter_slug = manga_slug + '-' + chapter_href.split('/')[-1].replace('.','-')
         chapter_soup = get_soup(chapter_url, headers)
 
         chapter_ordinal = chapter_href.split('/')[-1].replace('chapter-', '')
