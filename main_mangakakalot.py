@@ -847,8 +847,9 @@ if __name__ == "__main__":
     #                            "manga-je987187", "manga-ia986157", "manga-gj984018", "manga-zm977269", "manga-cy980307",
     #                            "manga-fc982759", "manga-aj977944", "manga-gw984131", "manga-nn965070", "manga-je987287",
     #                            "manga-hi985317", "manga-ii985891", "manga-eu981455", "manga-sm969447"]
-    list_update_original_id = ["manga-ii985891"]
-    mangakakalot = MangakakalotCrawlerFactory().create_crawler().push_to_db(mode='update', type='chapter',
-                                                                            list_update_original_id=list_update_original_id,
-                                                                            slug_format=True, publish=True,
-                                                                            count=10000, new=False, upload=False)
+    # list_update_original_id = ["manga-ii985891"]
+    # mangakakalot = MangakakalotCrawlerFactory().create_crawler().push_to_db(mode='update', type='chapter',
+    #                                                                         list_update_original_id=list_update_original_id,
+    #                                                                         slug_format=True, publish=True,
+    #                                                                         count=10000, new=False, upload=False)
+    MangakakalotCrawlerFactory.create_crawler().crawl()
