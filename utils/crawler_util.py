@@ -127,7 +127,7 @@ def process_chapter_ordinal(chapter_ordinal):
     frac, whole = math.modf(float(chapter_ordinal))
     round_frac = round(frac, 2)
     chapter_number = format_leading_chapter(int(whole))
-    chapter_part = format_leading_part(int(round_frac * 10))
+    chapter_part = format_leading_part(int(round_frac * 100))
 
     return chapter_number, chapter_part
 
