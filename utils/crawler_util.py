@@ -301,8 +301,8 @@ def new_chapter_builder(chapter_dict, manga_id, source_site, publish=True):
         'created_by': 0,
         'updated_by': 0,
         'deleted_by': None,
-        'created_at': chapter_dict['date'],
-        'updated_at': chapter_dict['date'],
+        'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+        'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
     }
 
 
