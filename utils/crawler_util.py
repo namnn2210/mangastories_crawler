@@ -203,8 +203,8 @@ def new_manga_builder(manga_obj_dict, slug_format=False, publish=True):
         'created_by': 0,
         'updated_by': 0,
         'deleted_by': None,
-        'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
-        'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+        'created_at': datetime.now(tz=pytz.timezone('UTC')),
+        'updated_at': datetime.now(tz=pytz.timezone('UTC')),
     }
 
     return manga_dict
@@ -256,8 +256,8 @@ def manga_builder(manga_obj_dict, slug_format=False, publish=True):
         'created_by': 0,
         'updated_by': 0,
         'deleted_by': None,
-        'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
-        'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+        'created_at': datetime.now(tz=pytz.timezone('UTC')),
+        'updated_at': datetime.now(tz=pytz.timezone('UTC')),
         'slug_original': manga_obj_dict['original_id']
     }
 
@@ -301,8 +301,8 @@ def new_chapter_builder(chapter_dict, manga_id, source_site, publish=True):
         'created_by': 0,
         'updated_by': 0,
         'deleted_by': None,
-        'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
-        'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+        'created_at': datetime.now(tz=pytz.timezone('UTC')),
+        'updated_at': datetime.now(tz=pytz.timezone('UTC')),
     }
 
 
@@ -345,8 +345,8 @@ def resource_builder(index, original, s3_path, chapter_id, bucket):
         "ordinal": index,
         'storage': bucket,
         'status': 1,
-        'created_at': datetime.now(tz=pytz.timezone('America/Chicago')),
-        'updated_at': datetime.now(tz=pytz.timezone('America/Chicago')),
+        'created_at': datetime.now(tz=pytz.timezone('UTC')),
+        'updated_at': datetime.now(tz=pytz.timezone('UTC')),
     }
 
 
