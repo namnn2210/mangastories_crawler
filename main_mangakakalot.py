@@ -328,8 +328,8 @@ if __name__ == "__main__":
     # list_update_original_ids = ['manga-kt987976']
     print(len(list_update_original_ids))
     mangakakalot = MangakakalotCrawlerFactory().create_crawler()
-    mangakakalot.push_to_db(mode='update', list_update_original_id=list_update_original_ids, type='all',
-                            slug_format=True, upload=False, publish=True)
-    # mangakakalot.push_to_db(mode='update', list_update_original_id=list_update_original_ids, type='all', new=False,
+    # mangakakalot.push_to_db(mode='update', list_update_original_id=list_update_original_ids, type='all',
     #                         slug_format=True, upload=False, publish=True)
+    mangakakalot.push_to_db(mode='update', list_update_original_id=list_update_original_ids, type='all', new=False,
+                            slug_format=True, upload=False, publish=True)
     # MangakakalotCrawlerFactory.create_crawler().crawl()
