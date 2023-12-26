@@ -650,8 +650,8 @@ def process_push_to_db(mode='crawl', type='manga', list_update_original_id=None,
     else:
         list_mangas = tx_mangas.find({"source_site": source_site})
     if mode == 'update':
-        list_mangas = list(tx_mangas.find(
-            {"original_id": {"$in": list_update_original_id}}))
+        for original_id in list_update_original_id:
+            list_mangas.append(tx_mangas.find({"original_id": original_id}))
     logging.info('==================== %s' % list_mangas)
     for manga in list_mangas:
         # Check if manga in DB:
