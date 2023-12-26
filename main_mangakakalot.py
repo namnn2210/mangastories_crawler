@@ -1,7 +1,15 @@
 from connections.connection import Connection
 from scrapers.mangakakalot import MangakakalotCrawlerFactory
 
+
+def divide_chunks(l, n):
+    # looping till length l
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
 if __name__ == "__main__":
+    mangakakalot = MangakakalotCrawlerFactory().create_crawler()
     list_update_original_ids = ["manga-oy991733", "manga-nh990664", "manga-ns990927", "manga-nk990919",
                                 "manga-ni990817", "manga-jk986893", "manga-ma989757", "manga-od991738",
                                 "manga-ng991163", "manga-kw988331", "manga-ki987365", "manga-nv990904",
@@ -326,10 +334,7 @@ if __name__ == "__main__":
                                 "manga-wn999596", "manga-wc999611", "manga-wd999612", "manga-wa999609",
                                 "manga-wo999597", "manga-wn999622", "manga-ww999605", "manga-wq999599"]
     # list_update_original_ids = ['manga-kt987976']
-    print(len(list_update_original_ids))
-    mangakakalot = MangakakalotCrawlerFactory().create_crawler()
-    # mangakakalot.push_to_db(mode='update', list_update_original_id=list_update_original_ids, type='all',
-    #                         slug_format=True, upload=False, publish=True)
-    mangakakalot.push_to_db(mode='update', list_update_original_id=list_update_original_ids, type='all', new=False,
-                            slug_format=True, upload=False, publish=True)
-    # MangakakalotCrawlerFactory.create_crawler().crawl()
+    list_part = list(divide_chunks(list_update_original_ids, 10))
+    for part in list_part:
+        mangakakalot.push_to_db(mode='update', list_update_original_id=part, type='all', new=False,
+                                slug_format=True, upload=False, publish=True)
