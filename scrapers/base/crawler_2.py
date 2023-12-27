@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from connections.connection import Connection
-
+from workers.worker import process_manga
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
 
 class Crawler(ABC):
     def __init__(self):
@@ -22,21 +23,11 @@ class Crawler(ABC):
 
     @abstractmethod
     def manga_enqueue(self, manga_url, source_site):
-        pass
-        # self.manga_redis.enqueue(self.extract_manga_info, args=(manga_url, source_site))
+        self.manga_redis.enqueue(process_manga, args=(manga_url, source_site,))
 
     @abstractmethod
     def chapter_enqueue(self, chapter_url, source_site, manga_original_id):
-        pass
-        # self.chapter_redis.enqueue(self.extract_chapter_info, args=(chapter_url, source_site, manga_original_id))
-
-    @abstractmethod
-    def extract_manga_info(self, manga_url, source_site):
-        pass
-
-    @abstractmethod
-    def extract_chapter_info(self, chapter_url, source_site, manga_original_id):
-        pass
+        self.chapter_redis.enqueue(process_manga, args=(chapter_url, source_site, manga_original_id,))
 
     @abstractmethod
     def get_update_chapter(self):

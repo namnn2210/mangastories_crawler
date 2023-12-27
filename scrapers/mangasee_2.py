@@ -65,11 +65,11 @@ class MangaseeCrawler2(Crawler):
 
     def manga_enqueue(self, manga_url, source_site):
         logging.info('Enqueue manga: %s - %s' % (manga_url, source_site))
-        self.manga_redis.enqueue(process_manga, args=(manga_url, source_site))
+        super().manga_enqueue(manga_url, source_site)
 
     def chapter_enqueue(self, chapter_url, source_site, manga_original_id):
         logging.info('Enqueue chapter: %s - %s - %s' % (chapter_url, source_site, manga_original_id))
-        self.chapter_redis.enqueue(self.extract_chapter_info, args=(chapter_url, source_site, manga_original_id))
+        super().chapter_enqueue(chapter_url, source_site, manga_original_id)
         # super().chapter_enqueue(chapter_url, source_site, manga_original_id)
 
     def get_update_chapter(self):

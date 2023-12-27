@@ -1,4 +1,4 @@
-from base.extractor import Extractor
+from .base.extractor import Extractor
 
 
 class MangaseeExtractor(Extractor):

@@ -106,8 +106,6 @@ class ManhuaplusCrawler(Crawler):
             'thumb': manga_thumb,
             'count_chapters': manga_count_chapters,
             'chapters': list_chapters_info,
-            'official_translation': '',
-            'rss': '',
             'source_site': MangaSourceEnum.MANHUAPLUS.value
         }
 
