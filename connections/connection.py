@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from configs.config import DBUSERNAME, DBPASSWORD, DBHOST, DBPORT, DBNAME, S3_AWS_ACCESS_KEY_ID, S3_AWS_SECRET_ACCESS_KEY, S3_ENDPOINT_URL, S3_REGION_NAME
 from rq import Queue
-from redis_cache import RedisCache
+from .redis_cache import RedisCache
 
 import boto3
 import botocore
@@ -24,7 +24,7 @@ class Connection():
         return db
 
     def mongo_connect(self):
-        client = pymongo.MongoClient("mongodb://localhost:27018/")
+        client = pymongo.MongoClient("mongodb://localhost:27017/")
         return client["mangamonster"]
 
     def redis_connect(self, db=2, queue_name=''):
