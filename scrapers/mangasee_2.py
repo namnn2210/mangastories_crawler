@@ -72,12 +72,6 @@ class MangaseeCrawler2(Crawler):
         self.chapter_redis.enqueue(self.extract_chapter_info, args=(chapter_url, source_site, manga_original_id))
         # super().chapter_enqueue(chapter_url, source_site, manga_original_id)
 
-    def extract_manga_info(self, manga_url, source_site):
-        print(manga_url, source_site)
-
-    def extract_chapter_info(self, chapter_url, source_site, manga_original_id):
-        print(chapter_url, source_site, manga_original_id)
-
     def get_update_chapter(self):
         pass
 
