@@ -58,12 +58,12 @@ class MangaseeCrawler2(Crawler):
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             # Submit each manga for processing to the executor
             for manga_url in list_mangas_final:
-                print(manga_url)
                 future = executor.submit(
                     self.manga_enqueue, manga_url, MangaSourceEnum.MANGASEE)
                 futures.append(future)
 
     def manga_enqueue(self, manga_url, source_site):
+        print('enqueue: ', manga_url,source_site)
         super().manga_enqueue(manga_url, source_site)
         
     def chapter_enqueue(self, chapter_url, source_site, manga_original_id):
