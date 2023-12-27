@@ -17,6 +17,7 @@ from utils.crawler_util import get_soup, format_chapter_number, format_leading_c
 # from models.entities import Manga, MangaChapters, MangaChapterResources
 from bs4 import BeautifulSoup
 from datetime import datetime
+from workers.worker import process_manga
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
@@ -64,7 +65,7 @@ class MangaseeCrawler2(Crawler):
 
     def manga_enqueue(self, manga_url, source_site):
         logging.info('Enqueue manga: %s - %s' % (manga_url, source_site))
-        self.manga_redis.enqueue(self.extract_manga_info, args=(manga_url, source_site))
+        self.manga_redis.enqueue(process_manga, args=(manga_url, source_site))
 
     def chapter_enqueue(self, chapter_url, source_site, manga_original_id):
         logging.info('Enqueue chapter: %s - %s - %s' % (chapter_url, source_site, manga_original_id))
