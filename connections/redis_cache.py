@@ -5,7 +5,7 @@ class RedisCache(object):
 
     def __init__(self, db=0):
         self.pool = redis.ConnectionPool(
-            host='10.1.0.3', port=6379, password='Bg230202r1', db=db)
+            host='localhost', port=6379, db=db)
 
     def get_redis(self):
         return redis.StrictRedis(connection_pool=self.pool)
