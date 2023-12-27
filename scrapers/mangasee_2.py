@@ -64,6 +64,9 @@ class MangaseeCrawler2(Crawler):
 
     def manga_enqueue(self, manga_url, source_site):
         super().manga_enqueue(manga_url, source_site)
+        
+    def chapter_enqueue(self, chapter_url, source_site, manga_original_id):
+        super().chapter_enqueue(chapter_url, source_site, manga_original_id)
 
     def extract_manga_info(self, manga_url, source_site):
         print(manga_url, source_site)
