@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from configs.config import DBUSERNAME, DBPASSWORD, DBHOST, DBPORT, DBNAME, S3_AWS_ACCESS_KEY_ID, S3_AWS_SECRET_ACCESS_KEY, S3_ENDPOINT_URL, S3_REGION_NAME
 from rq import Queue
-from .redis_cache import RedisCache
+from redis_cache import RedisCache
 
 import boto3
 import botocore
@@ -46,3 +46,4 @@ class Connection():
                                 aws_secret_access_key=S3_AWS_SECRET_ACCESS_KEY)  # Secret access key defined through an environment variable.
 
         return client
+

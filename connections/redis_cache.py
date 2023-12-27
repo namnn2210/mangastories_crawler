@@ -59,3 +59,4 @@ class RedisCache(object):
     def put_to_priority(self, queue_name, value, level_priority):
         rd = self.get_redis()
         rd.zincrby(queue_name, value, level_priority)
+
