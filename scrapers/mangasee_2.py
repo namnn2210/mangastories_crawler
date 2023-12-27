@@ -59,15 +59,17 @@ class MangaseeCrawler2(Crawler):
             # Submit each manga for processing to the executor
             for manga_url in list_mangas_final:
                 future = executor.submit(
-                    self.manga_enqueue, manga_url, MangaSourceEnum.MANGASEE)
+                    self.manga_enqueue, manga_url, MangaSourceEnum.MANGASEE.value)
                 futures.append(future)
 
     def manga_enqueue(self, manga_url, source_site):
-        print('enqueue: ', manga_url,source_site)
-        super().manga_enqueue(manga_url, source_site)
-        
+        logging.info('Enqueue manga: %s - %s' % (manga_url, source_site))
+        self.manga_redis.enqueue(self.extract_manga_info, args=(manga_url, source_site))
+
     def chapter_enqueue(self, chapter_url, source_site, manga_original_id):
-        super().chapter_enqueue(chapter_url, source_site, manga_original_id)
+        logging.info('Enqueue chapter: %s - %s - %s' % (chapter_url, source_site, manga_original_id))
+        self.chapter_redis.enqueue(self.extract_chapter_info, args=(chapter_url, source_site, manga_original_id))
+        # super().chapter_enqueue(chapter_url, source_site, manga_original_id)
 
     def extract_manga_info(self, manga_url, source_site):
         print(manga_url, source_site)
