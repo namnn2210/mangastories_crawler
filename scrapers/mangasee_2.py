@@ -17,7 +17,6 @@ from utils.crawler_util import get_soup, format_chapter_number, format_leading_c
 # from models.entities import Manga, MangaChapters, MangaChapterResources
 from bs4 import BeautifulSoup
 from datetime import datetime
-from workers.worker import process_manga
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
