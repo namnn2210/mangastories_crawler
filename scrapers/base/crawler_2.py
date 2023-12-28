@@ -23,11 +23,11 @@ class Crawler(ABC):
 
     @abstractmethod
     def manga_enqueue(self, manga_url, source_site):
-        self.manga_redis.enqueue(process_manga, args=(manga_url, source_site,))
+        self.manga_redis.enqueue(process_manga, args=(manga_url, source_site))
 
     @abstractmethod
     def chapter_enqueue(self, chapter_url, source_site, manga_original_id):
-        self.chapter_redis.enqueue(process_manga, args=(chapter_url, source_site, manga_original_id,))
+        self.chapter_redis.enqueue(process_manga, args=(chapter_url, source_site, manga_original_id))
 
     @abstractmethod
     def get_update_chapter(self):
