@@ -84,7 +84,7 @@ class MangaseeCrawler(Crawler):
             if existed_manga:
                 bucket = tx_manga_bucket_mapping.find_one({'$or': [{"original_id": existed_manga.original_id}, {
                     "original_id": existed_manga.original_id.lower()}]})['bucket']
-                chapter_encoded = self.chapter_encode(
+                chapter_encoded,_ = self.chapter_encode(
                     chapter['Chapter'])
                 chapter_url = 'https://mangasee123.com/read-online/{}{}.html'.format(
                     chapter['IndexName'], chapter_encoded)
@@ -231,7 +231,7 @@ class MangaseeCrawler(Crawler):
             if '' not in list_chapters:
                 for chapter in list_chapters:
                     chapter_json = self.string_to_json(chapter)
-                    chapter_encoded = self.chapter_encode(
+                    chapter_encoded,_ = self.chapter_encode(
                         chapter_json['Chapter'])
                     chapter_url = 'https://mangasee123.com/read-online/{}{}.html'.format(
                         manga_slug, chapter_encoded)
@@ -336,7 +336,7 @@ class MangaseeCrawler(Crawler):
         odd_string = chapter_string[len(chapter_string) - 1]
         if odd_string != '0':
             odd = '.{}'.format(odd_string)
-        return '-chapter-{}{}{}'.format(chapter, odd, index)
+        return '-chapter-{}{}{}'.format(chapter, odd, index), chapter
 
     def get_chapter_info(self, chapter_url):
         chapter_source = None

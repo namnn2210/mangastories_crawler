@@ -24,7 +24,7 @@ class Connection():
         return db
 
     def mongo_connect(self):
-        client = pymongo.MongoClient("mongodb://localhost:27017/")
+        client = pymongo.MongoClient("mongodb://localhost:27018/")
         return client["mangamonster"]
 
     def redis_connect(self, db=2, queue_name=''):
