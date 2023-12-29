@@ -61,6 +61,8 @@ class MangaseeExtractor(Extractor):
                     chapter_url = 'https://mangasee123.com/read-online/{}{}.html'.format(
                         manga_slug, chapter_encoded)
 
+
+
             final_dict = {
                 'name': manga_name,
                 'original': manga_url,
