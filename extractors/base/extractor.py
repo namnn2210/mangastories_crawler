@@ -22,5 +22,5 @@ class Extractor(ABC):
         pass
 
     @abstractmethod
-    def extract_chapter_info(self, chapter_url, source_site, manga_original_id):
+    def extract_chapter_info(self, chapter_url, source_site, manga_original_id, bucket):
         pass

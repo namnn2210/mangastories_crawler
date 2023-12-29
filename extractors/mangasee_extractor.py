@@ -9,6 +9,7 @@ from datetime import datetime
 
 import re
 import logging
+import json
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 header = {
@@ -50,27 +51,23 @@ class MangaseeExtractor(Extractor):
             a = list_chapters_str.replace(
                 'vm.Chapters = ', '').replace(';', '')
             list_chapters = a.strip('][').split('},')
-            # manga_count_chapters = len(list_chapters)
+            manga_count_chapters = len(list_chapters)
             # list_chapters_info = []
-            # if '' not in list_chapters:
-            #     for chapter in list_chapters:
-            #         chapter_json = self.string_to_json(chapter)
-            #         chapter_encoded = self.chapter_encode(
-            #             chapter_json['Chapter'])
-            #         chapter_url = 'https://mangasee123.com/read-online/{}{}.html'.format(
-            #             manga_slug, chapter_encoded)
-            #         chapter_source, chapter_info, index_name = self.get_chapter_info(
-            #             chapter_url)
-            #         chapter_info_dict = self.extract_chapter_info(
-            #             chapter_source, chapter_info, chapter_url, manga_slug, bucket)
-            #         list_chapters_info.append(chapter_info_dict)
+            if '' not in list_chapters:
+                for chapter in list_chapters:
+                    chapter_json = self.string_to_json(chapter)
+                    chapter_encoded,_ = self.chapter_encode(
+                        chapter_json['Chapter'])
+                    chapter_url = 'https://mangasee123.com/read-online/{}{}.html'.format(
+                        manga_slug, chapter_encoded)
+
             final_dict = {
                 'name': manga_name,
                 'original': manga_url,
                 'original_id': manga_slug,
                 'thumb': manga_thumb,
-                # 'count_chapters': manga_count_chapters,
-                # 'chapters': list_chapters_info,
+                'count_chapters': manga_count_chapters,
+                'chapters': [],
                 'manga_status': manga_ss,
                 'source_site': MangaSourceEnum.MANGASEE.value
             }
@@ -119,5 +116,97 @@ class MangaseeExtractor(Extractor):
                         manga_raw_info_dict[field] = value
         return manga_raw_info_dict
 
-    def extract_chapter_info(self, chapter_url, source_site, manga_original_id):
-        print(chapter_url, source_site, manga_original_id)
+    @staticmethod
+    def string_to_json(chapter_str):
+        if not chapter_str.endswith('}'):
+            chapter_str += '}'
+        return json.loads(chapter_str)
+
+    @staticmethod
+    def extract_script(url):
+        soup = get_soup(url, header=header)
+        return soup.find_all('script')[-1].text
+
+    @staticmethod
+    def chapter_encode(chapter_string):
+        index = ''
+        index_string = chapter_string[0:1]
+        if index_string != '1':
+            index = '-index-{}'.format(index_string)
+        chapter = int(chapter_string[1:-1])
+        odd = ''
+        odd_string = chapter_string[len(chapter_string) - 1]
+        if odd_string != '0':
+            odd = '.{}'.format(odd_string)
+        return '-chapter-{}{}{}'.format(chapter, odd, index), chapter
+
+    @staticmethod
+    def get_image_url(slug, directory, formatted_chapter_number, formatted_img_count):
+        if directory is not None:
+            return '/manga/{}/{}/{}-{}.png'.format(slug, directory, formatted_chapter_number, formatted_img_count)
+        else:
+            return '/manga/{}/{}-{}.png'.format(slug, formatted_chapter_number, formatted_img_count)
+
+    def extract_chapter_info(self, chapter_url, source_site, manga_original_id, bucket):
+        chapter_source = None
+        chapter_info = None
+        index_name = None
+        chapter_script = self.extract_script(chapter_url)
+        chapter_regex = r'vm.CurChapter\s=\s.{0,};'
+        chapter_source_regex = r'vm.CurPathName\s=\s.{0,};'
+        index_name_regex = r'vm.IndexName\s=\s.{0,};'
+        source_match = re.search(chapter_source_regex, chapter_script)
+        if source_match:
+            chapter_source_str = source_match.group()
+            chapter_source = chapter_source_str.replace(
+                'vm.CurPathName = ', '').replace(';', '').replace('"', '')
+        info_match = re.search(chapter_regex, chapter_script)
+        if info_match:
+            chapter_str = info_match.group()
+            chapter_info = json.loads(chapter_str.replace(
+                'vm.CurChapter = ', '').replace(';', ''))
+        index_match = re.search(index_name_regex, chapter_script)
+        if index_match:
+            index_name_str = index_match.group()
+            index_name = index_name_str.replace(
+                'vm.IndexName = ', '').replace(';', '').replace('"', '')
+        if chapter_info:
+            formatted_chapter_number = format_leading_chapter(
+                format_chapter_number(chapter_info['Chapter']))
+            # Process chapter + chapter resources
+            index_string = chapter_info['Chapter'][0:1]
+            if index_string == '1':
+                season = 0
+            else:
+                season = int(index_string)
+            if chapter_info['Directory'] and chapter_info['Directory'] != '':
+                directory = chapter_info['Directory']
+                directory_slug = '-' + directory
+            else:
+                directory = ''
+                directory_slug = ''
+            # Generate resources:
+            list_resources = []
+            chapter_ordinal = format_chapter_number(chapter_info['Chapter'])
+            chapter_number, chapter_part = process_chapter_ordinal(chapter_ordinal)
+            chapter_season = format_leading_part(int(season))
+            for i in range(1, int(chapter_info['Page']) + 1):
+                img_url = self.get_image_url(slug=manga_original_id, directory=directory,
+                                             formatted_chapter_number=formatted_chapter_number,
+                                             formatted_img_count=format_leading_img_count(i))
+                list_resources.append(img_url)
+            chapter_info_dict = {
+                'ordinal': chapter_ordinal,
+                'chapter_number': chapter_number,
+                'chapter_part': chapter_part,
+                'slug': manga_original_id.lower() + directory_slug.lower() + '-chapter-' + format_chapter_number(
+                    chapter_info['Chapter']).replace('.', '-'),
+                'original': chapter_url,
+                'resource_status': 'ORIGINAL',
+                'season': chapter_season,
+                'resources': list_resources,
+                'resources_storage': chapter_source,
+                'resources_bucket': bucket,
+                'pages': len(list_resources),
+                'date': chapter_info['Date']
+            }

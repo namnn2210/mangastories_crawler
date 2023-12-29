@@ -61,7 +61,7 @@ class MangaseeCrawler2(Crawler):
             # Submit each manga for processing to the executor
             for manga in list_mangas_final:
                 future = executor.submit(
-                    self.manga_enqueue, MangaSourceEnum.MANGASEE.value, (manga,))
+                    self.manga_enqueue, MangaSourceEnum.MANGASEE.value, manga)
                 futures.append(future)
 
     def manga_enqueue(self, source_site, *args):

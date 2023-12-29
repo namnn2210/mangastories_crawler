@@ -10,7 +10,7 @@ def divide_chunks(l, n):
 
 if __name__ == "__main__":
     db = Connection().mysql_connect(db_name='mangamonster_com')
-    list_update_original_ids = [item[0] for item in db.query(Manga.slug_original).filter(Manga.original.like('%mangakakalot%'),Manga.status == 1).all()]
+    list_update_original_ids = [item[0] for item in db.query(Manga.slug_original).filter(Manga.original.like('%mangakakalot%'), Manga.manga_type_id == 2,Manga.status == 1).all()]
     mangakakalot = MangakakalotCrawlerFactory().create_crawler()
     # print(len(list_update_original_ids))
     # list_update_original_ids = ['manga-kt987976']
