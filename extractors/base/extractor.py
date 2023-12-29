@@ -18,7 +18,7 @@ class Extractor(ABC):
         self.mongo_tx_manga_bucket_mapping = mongo_tx_manga_bucket_mapping
 
     @abstractmethod
-    def extract_manga_info(self, source_site, **kwargs):
+    def extract_manga_info(self, source_site, *args):
         pass
 
     @abstractmethod

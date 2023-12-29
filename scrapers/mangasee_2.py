@@ -50,22 +50,23 @@ class MangaseeCrawler2(Crawler):
             directory_json_str = directory_match.group().replace(
                 'vm.Directory = ', '').replace(';', '')
             list_mangas = json.loads(directory_json_str)
-            for item in list_mangas:
-                manga_slug = item['i']
-                list_mangas_final.append(f'https://mangasee123.com/manga/{manga_slug}')
+            list_mangas_final = list_mangas
+            # for item in list_mangas:
+            #     manga_slug = item['i']
+            #     list_mangas_final.append(f'https://mangasee123.com/manga/{manga_slug}')
 
         futures = []
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             # Submit each manga for processing to the executor
-            for manga_url in list_mangas_final:
+            for manga in list_mangas_final:
                 future = executor.submit(
-                    self.manga_enqueue, manga_url, MangaSourceEnum.MANGASEE.value)
+                    self.manga_enqueue, MangaSourceEnum.MANGASEE.value, (manga,))
                 futures.append(future)
 
-    def manga_enqueue(self, manga_url, source_site):
-        logging.info('Enqueue manga: %s - %s' % (manga_url, source_site))
-        super().manga_enqueue(manga_url, source_site)
+    def manga_enqueue(self, source_site, *args):
+        logging.info('Enqueue manga: %s - %s' % (source_site, *args))
+        super().manga_enqueue(source_site, *args)
 
     def chapter_enqueue(self, chapter_url, source_site, manga_original_id):
         logging.info('Enqueue chapter: %s - %s - %s' % (chapter_url, source_site, manga_original_id))

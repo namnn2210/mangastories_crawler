@@ -35,7 +35,7 @@ class MangaseeUpdater(Updater):
 
     def get_update_chapter(self):
         logging.info('Updating new chapters...')
-        logging.info('Time: %s' % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
         manga_url = 'https://mangasee123.com/'
         soup = get_soup(manga_url, header=header)
         script = soup.findAll('script')[-1].text
