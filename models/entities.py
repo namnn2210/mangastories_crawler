@@ -44,6 +44,7 @@ class Manga(Base):
     search_text = Column(Text)
     search_field = Column(Text)
     slug_original = Column(String(255))
+    latest_chapter_published = Column(DateTime)
 
 
 class MangaChapters(Base):
