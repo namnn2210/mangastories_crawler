@@ -555,28 +555,31 @@ def push_chapter_to_db(db, processed_chapter_dict, bucket, manga_id, insert=True
         db.commit()
     else:
         logging.info('CHAPTER EXISTS => UPDATE')
-        existed_chapter = chapter_query.first()
-        for key, value in chapter_dict.items():
-            if key != 'created_at' and key != 'resource_status':
-                setattr(existed_chapter, key, value)
-        index = 0
-        while index < processed_chapter_dict['pages']:
-            original = 'https://' + \
-                       processed_chapter_dict['resources_storage'] + \
-                       processed_chapter_dict['resources'][index]
-            img_count = index + 1
-            s3_path = processed_chapter_dict['s3_prefix'] + \
-                      '/' + format_leading_img_count(img_count) + '.webp'
-            # s3_url = f'https://{bucket}.ams3.digitaloceanspaces.com/{s3_path}'
-            print(original)
-            resources.append(original)
-            # resources_s3.append(s3_url)
-            index += 1
-        existed_chapter.resources = resources
-        # existed_chapter.resources_s3 = resources_s3
+        try:
+            existed_chapter = chapter_query.first()
+            for key, value in chapter_dict.items():
+                if key != 'created_at' and key != 'resource_status':
+                    setattr(existed_chapter, key, value)
+            index = 0
+            while index < processed_chapter_dict['pages']:
+                original = 'https://' + \
+                           processed_chapter_dict['resources_storage'] + \
+                           processed_chapter_dict['resources'][index]
+                img_count = index + 1
+                s3_path = processed_chapter_dict['s3_prefix'] + \
+                          '/' + format_leading_img_count(img_count) + '.webp'
+                # s3_url = f'https://{bucket}.ams3.digitaloceanspaces.com/{s3_path}'
+                print(original)
+                resources.append(original)
+                # resources_s3.append(s3_url)
+                index += 1
+            existed_chapter.resources = resources
+            # existed_chapter.resources_s3 = resources_s3
 
-        # logging.info('%s => %s ' % (existed_chapter.resource_status, chapter_dict['resource_status']))
-        db.commit()
+            # logging.info('%s => %s ' % (existed_chapter.resource_status, chapter_dict['resource_status']))
+            db.commit()
+        except Exception as ex:
+            print(str(ex))
 
     logging.info('UPDATE UPDATED AT MANGA TO PUSH TO TOP')
     # Update last update
