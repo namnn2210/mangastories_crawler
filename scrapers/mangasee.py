@@ -82,8 +82,8 @@ class MangaseeCrawler(Crawler):
         for chapter in list_hot_update:
             existed_manga = db.query(NewManga).where(NewManga.original_id == chapter['IndexName']).first()
             if existed_manga:
-                bucket = tx_manga_bucket_mapping.find_one({'$or': [{"original_id": existed_manga.original_id}, {
-                    "original_id": existed_manga.original_id.lower()}]})['bucket']
+                # bucket = tx_manga_bucket_mapping.find_one({'$or': [{"original_id": existed_manga.original_id}, {
+                #     "original_id": existed_manga.original_id.lower()}]})['bucket']
                 chapter_encoded,_ = self.chapter_encode(
                     chapter['Chapter'])
                 chapter_url = 'https://mangasee123.com/read-online/{}{}.html'.format(
@@ -91,7 +91,7 @@ class MangaseeCrawler(Crawler):
                 chapter_source, chapter_info, index_name = self.get_chapter_info(
                     chapter_url)
                 chapter_info_dict = self.extract_chapter_info(
-                    chapter_source, chapter_info, chapter_url, chapter['IndexName'], bucket)
+                    chapter_source, chapter_info, chapter_url, chapter['IndexName'], '')
 
                 if chapter_info_dict:
                     # Update to new db
@@ -100,7 +100,7 @@ class MangaseeCrawler(Crawler):
                     chapter_dict_new = new_chapter_builder(
                         chapter_info_dict, existed_manga.id, source_site=MangaSourceEnum.MANGASEE.value, publish=publish)
                     new_push_chapter_to_db(
-                        db, chapter_dict_new, bucket, existed_manga.id, existed_manga.slug, upload=False,
+                        db, chapter_dict_new, '', existed_manga.id, existed_manga.slug, upload=False,
                         error=tx_manga_errors)
 
                     # Update to old db
@@ -114,7 +114,7 @@ class MangaseeCrawler(Crawler):
                                               'resources': chapter_info_dict[
                                                   'resources'], 'resources_storage': chapter_info_dict['resources_storage'],
                                               's3_prefix': s3_prefix}
-                    push_chapter_to_db(old_db, processed_chapter_dict, bucket, existed_manga.id,
+                    push_chapter_to_db(old_db, processed_chapter_dict, '', existed_manga.id,
                                        insert=True, upload=True, error=tx_manga_errors)
 
     def update_chapter(self):
