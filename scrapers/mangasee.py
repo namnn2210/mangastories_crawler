@@ -91,7 +91,7 @@ class MangaseeCrawler(Crawler):
                 chapter_source, chapter_info, index_name = self.get_chapter_info(
                     chapter_url)
                 chapter_info_dict = self.extract_chapter_info(
-                    chapter_source, chapter_info, chapter_url, chapter['IndexName'], '')
+                    chapter_source, chapter_info, chapter_url, chapter['IndexName'], 'mangamonster')
 
                 if chapter_info_dict:
                     # Update to new db
@@ -100,7 +100,7 @@ class MangaseeCrawler(Crawler):
                     chapter_dict_new = new_chapter_builder(
                         chapter_info_dict, existed_manga.id, source_site=MangaSourceEnum.MANGASEE.value, publish=publish)
                     new_push_chapter_to_db(
-                        db, chapter_dict_new, '', existed_manga.id, existed_manga.slug, upload=False,
+                        db, chapter_dict_new, 'mangamonster', existed_manga.id, existed_manga.slug, upload=False,
                         error=tx_manga_errors)
 
                     # Update to old db
@@ -114,8 +114,8 @@ class MangaseeCrawler(Crawler):
                                               'resources': chapter_info_dict[
                                                   'resources'], 'resources_storage': chapter_info_dict['resources_storage'],
                                               's3_prefix': s3_prefix}
-                    push_chapter_to_db(old_db, processed_chapter_dict, '', existed_manga.id,
-                                       insert=True, upload=True, error=tx_manga_errors)
+                    push_chapter_to_db(old_db, processed_chapter_dict, 'mangamonster', existed_manga.id,
+                                       insert=True, upload=False, error=tx_manga_errors)
 
     def update_chapter(self):
         logging.info('Updating new chapters...')
